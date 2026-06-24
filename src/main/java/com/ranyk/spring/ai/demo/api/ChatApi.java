@@ -222,6 +222,28 @@ public class ChatApi {
     }
 
     /**
+     * 调用 ChatService 的向量存储方法, 将用户传入的 List&lt;String&gt; 文本信息存储到 Redis 向量存储中
+     *
+     * @param texts 用户输入的文本信息 List 集合
+     * @return 调用结果 {@link Result} 泛型对象, 封装了结果数据
+     */
+    @GetMapping("/vector/store/user/input/text")
+    public Result<String> vectorStoreUserInputText(@RequestParam List<String> texts) {
+        return Result.success(chatService.vectorStoreUserInputText(texts));
+    }
+
+    /**
+     * 调用 ChatService 的相似性查询方法, 依据用户传入的 文本信息 text 进行相似行文本查询
+     *
+     * @param text 用户输入的文本信息
+     * @return 调用结果 {@link Result} 泛型对象, 封装了结果数据
+     */
+    @GetMapping("/vector/similarity/query/user/input/text")
+    public Result<String> vectorSimilarityQueryUserInputText(@RequestParam String text) {
+        return Result.success(chatService.vectorStoreSimilarityQueryUserInputText(text));
+    }
+
+    /**
      * 构建 SSE 事件对象
      *
      * @param eventType 事件类型

@@ -10,7 +10,10 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.document.Document;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
@@ -47,9 +50,13 @@ public class ChatService {
      */
     private final ChatClient dashscopeInMemoryChatMemoryChatClient;
     /**
-     * 使用 OpenAI 的 嵌入式 模型 - 嵌入模型 {@link OpenAiEmbeddingModel}
+     * 使用 OpenAI 的 嵌入式 模型 - 嵌入模型 {@link OpenAiEmbeddingModel} - 使用 Spring AI 的自动配置创建的 嵌入模型 {@link OpenAiEmbeddingModel}
      */
     private final OpenAiEmbeddingModel openAiEmbeddingModel;
+    /**
+     * 向量存储 {@link VectorStore} 对象 - 使用 Spring AI 的自动配置创建的 向量存储 {@link VectorStore} 对象
+     */
+    private final VectorStore vectorStore;
     /**
      * Spring AI 需要调用的日期时间工具类 {@link DataTimeTool}
      */
@@ -63,6 +70,7 @@ public class ChatService {
      * @param javaCounselorChatClient               使用 OpenAI 接口 调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 专用于 Java 信息咨询的聊天客户端对象 {@link ChatClient}
      * @param dashscopeInMemoryChatMemoryChatClient 使用 OpenAI 接口 调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 带有会话记忆存储功能 - 聊天客户端对象 {@link ChatClient}
      * @param openAiEmbeddingModel                  使用 OpenAI 的 嵌入式 模型 - 嵌入模型 {@link OpenAiEmbeddingModel}
+     * @param vectorStore                           向量存储 {@link VectorStore} 对象- 使用 Spring AI 的自动配置创建的 嵌入模型 {@link OpenAiEmbeddingModel}
      * @param dataTimeTool                          Spring AI 需要调用的日期时间工具类 {@link DataTimeTool}
      */
     @Autowired
@@ -71,12 +79,14 @@ public class ChatService {
                        ChatClient javaCounselorChatClient,
                        ChatClient dashscopeInMemoryChatMemoryChatClient,
                        OpenAiEmbeddingModel openAiEmbeddingModel,
+                       VectorStore vectorStore,
                        DataTimeTool dataTimeTool) {
         this.dashscopeChatClient = dashscopeChatClient;
         this.ollamaChatClient = ollamaChatClient;
         this.javaCounselorChatClient = javaCounselorChatClient;
         this.dashscopeInMemoryChatMemoryChatClient = dashscopeInMemoryChatMemoryChatClient;
         this.openAiEmbeddingModel = openAiEmbeddingModel;
+        this.vectorStore = vectorStore;
         this.dataTimeTool = dataTimeTool;
     }
 
@@ -349,4 +359,52 @@ public class ChatService {
         log.info("Current Use Dashscope Embedding Method, After calculating the Euclidean distance, the result is => {}", JSONUtil.toJsonStr(distanceList));
         return JSONUtil.toJsonStr(distanceList);
     }
+
+    /**
+     * 使用 OpenAI 向量存储服务, 存储用户输入的文本向量数据
+     *
+     * @param texts 用户输入的文本内容
+     * @return 存储结果
+     */
+    public String vectorStoreUserInputText(List<String> texts) {
+        log.info("Current Use OpenAI Vector Store Method, User Input Texts => {}", JSONUtil.toJsonStr(texts));
+        // 校验参数 - 判定用户输入的文本是否为空
+        if (Objects.isNull(texts) || texts.isEmpty()) {
+            log.error("Invalid input: texts is null or empty");
+            return "Invalid input: texts is null or empty";
+        }
+        // 将用户输入的文本内容转换为 Document 对象 List 集合
+        List<Document> docs = List.of(texts.stream().map(Document::new).toList().toArray(new Document[0]));
+        // 调用向量存储对象, 向 Redis 中存储向量数据
+        vectorStore.add(docs);
+        log.info("Current Use OpenAI Vector Store Method, After storing the vector data in Redis, Current Store Size => {}", docs.size());
+        return "Success";
+    }
+
+    /**
+     * 使用 OpenAI 向量存储服务, 查询与用户输入的文本最相似的文本数据
+     *
+     * @param text 用户输入的文本内容
+     * @return 查询结果
+     */
+    public String vectorStoreSimilarityQueryUserInputText(String text) {
+        log.info("Current Use OpenAI Vector Store Method, Query Similarity User Input Text, Current User Input Text => {}", text);
+        // 校验参数 - 判定用户输入的文本是否为空
+        if (Objects.isNull(text) || text.isEmpty()) {
+            log.error("Invalid input: text is null or empty");
+            return "Invalid input: text is null or empty";
+        }
+        // 调用向量存储对象, 进行相似查询
+        List<Document> documents = vectorStore.similaritySearch(
+                // 构建相似查询的查询请求对象
+                SearchRequest.builder()
+                        // 设置查询相似的 文本内容
+                        .query(text)
+                        // 设置查询相似的文本数量
+                        .topK(2)
+                        .build());
+        log.info("Current Use OpenAI Vector Store Method, Query Similarity User Input Text, Similarity Search Size => {} , Result => {}", documents.size(), JSONUtil.toJsonStr(documents));
+        return JSONUtil.toJsonStr(documents);
+    }
+
 }
