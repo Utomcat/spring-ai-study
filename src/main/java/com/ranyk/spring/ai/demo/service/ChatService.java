@@ -4,7 +4,9 @@ import cn.hutool.json.JSONUtil;
 import com.ranyk.spring.ai.demo.ai.tool.DataTimeTool;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBook;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBookReview;
+import com.ranyk.spring.ai.demo.utils.MathUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.audio.tts.TextToSpeechModel;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -15,8 +17,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * CLASS_NAME: ChatService.java
@@ -54,6 +55,7 @@ public class ChatService {
      * Spring AI 需要调用的日期时间工具类 {@link DataTimeTool}
      */
     private final DataTimeTool dataTimeTool;
+    private final TextToSpeechModel textToSpeechModel;
 
     /**
      * 构造方法 - 向 ChatService 对象中注入 ChatClient 对象
@@ -71,13 +73,14 @@ public class ChatService {
                        ChatClient javaCounselorChatClient,
                        ChatClient dashscopeInMemoryChatMemoryChatClient,
                        OpenAiEmbeddingModel openAiEmbeddingModel,
-                       DataTimeTool dataTimeTool) {
+                       DataTimeTool dataTimeTool, TextToSpeechModel textToSpeechModel) {
         this.dashscopeChatClient = dashscopeChatClient;
         this.ollamaChatClient = ollamaChatClient;
         this.javaCounselorChatClient = javaCounselorChatClient;
         this.dashscopeInMemoryChatMemoryChatClient = dashscopeInMemoryChatMemoryChatClient;
         this.openAiEmbeddingModel = openAiEmbeddingModel;
         this.dataTimeTool = dataTimeTool;
+        this.textToSpeechModel = textToSpeechModel;
     }
 
     /**
@@ -308,8 +311,45 @@ public class ChatService {
         float[] floats = openAiEmbeddingModel.embed(text);
         // 将 float 数组转换为 JSON 字符串
         String floatsString = JSONUtil.toJsonStr(floats);
-        log.info("Current Use Dashscope Embedding Method, Converted text from the original text => {}, The result of the transformation => {}", text, floatsString);
+        log.info("Current Use Dashscope Embedding Method, After converting the text to a vector float array, the array length is => {} ", floats.length);
+        log.info("Current Use Dashscope Embedding Method, Converted text from the original text => {}", text);
+        log.info("Current Use Dashscope Embedding Method, The result of the transformation => {} ", floatsString);
         // 返回调用 嵌入式 模型将文本转换后的嵌入向量结果
         return floatsString;
+    }
+
+    /**
+     * 聊天处理方法 -  使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - text-embedding-v4 大模型 - 嵌入式 模型 - 将多段文本转换为嵌入向量, 并两两计算出两个向量之间的距离,通过使用的计算方式分别采用调用的 MathUtils 工具类的方法 - 阻塞式,等待所有结果一起返回
+     *
+     * @param texts 用户输入的多段需要转换的文本
+     * @param type  距离计算方式类型, 1: 表示欧式距离计算方式; 2: 表示余弦距离计算方式; 3: 表示其他距离计算方式; 具体参见 {@link MathUtils.DistanceTypeEnum} 类
+     * @return 距离计算结果
+     */
+    public String dashscopeEmbeddingConvertMultiTextAndGetEuclideanDistance(List<String> texts, Integer type) {
+        log.info("Current Use Dashscope Embedding Method, Convert Multi Text to Embedding and Get Euclidean Distance, User Input Texts => {}", JSONUtil.toJsonStr(texts));
+        if (Objects.isNull(texts) || texts.isEmpty() || texts.size() < 2) {
+            log.error("Invalid input: texts is null, empty, or contains less than two elements");
+            return "Invalid input: texts is null, empty, or contains less than two elements";
+        }
+        Map<String, float[]> textVectorMap = new HashMap<>(texts.size());
+        texts.forEach(text -> textVectorMap.put(text, openAiEmbeddingModel.embed(text)));
+        // 遍历 textVectorMap , 两两 调用 MathUtils 工具中的 calculateEuclideanDistance 方法计算两个向量之间的 欧式距离, 并将两两计算结果记录下来, 最后返回所有的计算结果, 不重复计算
+        List<Map<String, Object>> distanceList = new ArrayList<>();
+        List<String> keys = new ArrayList<>(textVectorMap.keySet());
+        for (int i = 0; i < keys.size(); i++) {
+            for (int j = i + 1; j < keys.size(); j++) {
+                String text1 = keys.get(i);
+                String text2 = keys.get(j);
+                double distance = MathUtils.calculateDistance(textVectorMap.get(text1), textVectorMap.get(text2), MathUtils.DistanceTypeEnum.getByType(type));
+                Map<String, Object> distanceInfo = new HashMap<>();
+                distanceInfo.put("text1", text1);
+                distanceInfo.put("text2", text2);
+                distanceInfo.put("distance", distance);
+                distanceInfo.put("type", MathUtils.DistanceTypeEnum.getNameByType(type));
+                distanceList.add(distanceInfo);
+            }
+        }
+        log.info("Current Use Dashscope Embedding Method, After calculating the Euclidean distance, the result is => {}", JSONUtil.toJsonStr(distanceList));
+        return JSONUtil.toJsonStr(distanceList);
     }
 }
