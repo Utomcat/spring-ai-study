@@ -14,7 +14,9 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.redis.RedisVectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -58,9 +60,18 @@ public class ChatService {
      */
     private final VectorStore vectorStore;
     /**
+     * Redis 向量存储 {@link RedisVectorStore} 对象 - 使用 Spring AI 的自动配置创建的 Redis 向量存储 {@link RedisVectorStore} 对象
+     */
+    private final RedisVectorStore redisVectorStore;
+    /**
      * Spring AI 需要调用的日期时间工具类 {@link DataTimeTool}
      */
     private final DataTimeTool dataTimeTool;
+    /**
+     * 批量删除向量存储数据时, 每批次删除的数量, 如果未进行配置, 则默认为 10
+     */
+    @Value("${vector.data.delete.batch-quantity:10}")
+    private Integer batchQuantity;
 
     /**
      * 构造方法 - 向 ChatService 对象中注入 ChatClient 对象
@@ -71,6 +82,7 @@ public class ChatService {
      * @param dashscopeInMemoryChatMemoryChatClient 使用 OpenAI 接口 调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 带有会话记忆存储功能 - 聊天客户端对象 {@link ChatClient}
      * @param openAiEmbeddingModel                  使用 OpenAI 的 嵌入式 模型 - 嵌入模型 {@link OpenAiEmbeddingModel}
      * @param vectorStore                           向量存储 {@link VectorStore} 对象- 使用 Spring AI 的自动配置创建的 嵌入模型 {@link OpenAiEmbeddingModel}
+     * @param redisVectorStore                      Redis 向量存储 {@link RedisVectorStore} 对象- 使用 Spring AI 的自动配置创建的 Redis 向量存储 {@link RedisVectorStore} 对象
      * @param dataTimeTool                          Spring AI 需要调用的日期时间工具类 {@link DataTimeTool}
      */
     @Autowired
@@ -80,6 +92,7 @@ public class ChatService {
                        ChatClient dashscopeInMemoryChatMemoryChatClient,
                        OpenAiEmbeddingModel openAiEmbeddingModel,
                        VectorStore vectorStore,
+                       RedisVectorStore redisVectorStore,
                        DataTimeTool dataTimeTool) {
         this.dashscopeChatClient = dashscopeChatClient;
         this.ollamaChatClient = ollamaChatClient;
@@ -87,6 +100,7 @@ public class ChatService {
         this.dashscopeInMemoryChatMemoryChatClient = dashscopeInMemoryChatMemoryChatClient;
         this.openAiEmbeddingModel = openAiEmbeddingModel;
         this.vectorStore = vectorStore;
+        this.redisVectorStore = redisVectorStore;
         this.dataTimeTool = dataTimeTool;
     }
 
@@ -407,4 +421,70 @@ public class ChatService {
         return JSONUtil.toJsonStr(documents);
     }
 
+    /**
+     * 使用 OpenAI 向量存储服务, 查询所有文档的 ID , 一般不建议使用这种方式, 因为这种操作, 一旦文档数量过多, 将会非常耗时, 从而导致性能下降
+     *
+     * @return 返回所有文档的 ID
+     */
+    public List<String> vectorStoreAllDocumentsOfId() {
+        log.info("Current Use OpenAI Vector Store Method, Query All Documents Of Id");
+        // 获取总文档数
+        long count = redisVectorStore.count();
+        // 查询所有的文档数据
+        List<Document> documentList = redisVectorStore.similaritySearch(SearchRequest.builder()
+                // 设置查询所有文档
+                .query("")
+                // 设置查询所有文档数量
+                .topK((int) count)
+                // 构建查询请求对象
+                .build());
+        log.info("Current Use OpenAI Vector Store Method, Query All Documents Of Id, Total Size => {}", documentList.size());
+        // 遍历文档数据, 获取文档的 ID , 并返回
+        return documentList.stream().map(Document::getId).toList();
+    }
+
+    /**
+     * 使用 OpenAI 向量存储服务, 删除指定 ID 的文档数据
+     *
+     * @param id 文档 ID
+     * @return 删除结果
+     */
+    public String vectorStoreDeleteDocumentById(String id) {
+        log.info("Current Use OpenAI Vector Store Method, Delete Document By Id, Document Id => {}", id);
+        // 校验参数 - 判定文档 ID 是否为空
+        if (Objects.isNull(id) || id.isEmpty()) {
+            log.error("Invalid input: id is null or empty");
+            return "Invalid input: id is null or empty";
+        }
+        // 调用向量存储对象, 删除文档, 使用 文档 ID 列表
+        redisVectorStore.delete(List.of(id));
+        log.info("Current Use OpenAI Vector Store Method, Delete Document By Id, Document Id => {} , Result => {}", id, "Success");
+        return "Success";
+    }
+
+    /**
+     * 使用 OpenAI 向量存储服务, 删除所有文档数据
+     *
+     * @return 删除结果
+     */
+    public String vectorStoreDeleteAllDocuments() {
+        log.info("Current Use OpenAI Vector Store Method, Delete All Documents");
+        // 查询当前存在的文档数量
+        long count = redisVectorStore.count();
+        if (count <= 0) {
+            log.info("Current Use OpenAI Vector Store Method, Delete All Documents, The data volume is 0,Return directly");
+            return "No Operation";
+        }
+        // 求 count / batchQuantity 向上取整
+        int batchCount = (int) Math.ceil(count / (double) batchQuantity);
+        for (int i = 0; i < batchCount; i++) {
+            List<String> ids = redisVectorStore.similaritySearch(SearchRequest.builder()
+                    .query("")
+                    .topK(batchQuantity)
+                    .build()).stream().map(Document::getId).toList();
+            redisVectorStore.delete(ids);
+        }
+        log.info("Current Use OpenAI Vector Store Method, Delete All Documents size => {}, Result => {}", count, "Success");
+        return "Success";
+    }
 }

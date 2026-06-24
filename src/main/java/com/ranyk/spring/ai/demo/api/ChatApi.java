@@ -244,6 +244,37 @@ public class ChatApi {
     }
 
     /**
+     * 调用 ChatService 的向量ID 获取方法, 查询当前 Redis 向量数据库中所有的文档数据 ID
+     *
+     * @return 调用结果 {@link Result} 泛型对象, 封装了结果数据
+     */
+    @GetMapping("/vector/store/all/documents/id")
+    public Result<List<String>> vectorStoreAllDocumentsOfId() {
+        return Result.success(chatService.vectorStoreAllDocumentsOfId());
+    }
+
+    /**
+     * 调用 ChatService 的向量删除方法, 依据用户传入的文档数据 ID 删除对应的向量数据
+     *
+     * @param id 用户输入的文档数据 ID
+     * @return 调用结果 {@link Result} 泛型对象, 封装了结果数据
+     */
+    @GetMapping("/vector/store/delete/document/id")
+    public Result<String> vectorStoreDeleteDocumentById(@RequestParam String id) {
+        return Result.success(chatService.vectorStoreDeleteDocumentById(id));
+    }
+    
+    /**
+     * 调用 ChatService 的向量删除所有方法, 删除 Redis 向量数据库中所有的文档数据 - 谨慎操作
+     *
+     * @return 调用结果 {@link Result} 泛型对象, 封装了结果数据
+     */
+    @GetMapping("/vector/store/delete/all/documents")
+    public Result<String> vectorStoreDeleteAllDocuments() {
+        return Result.success(chatService.vectorStoreDeleteAllDocuments());
+    }
+
+    /**
      * 构建 SSE 事件对象
      *
      * @param eventType 事件类型
