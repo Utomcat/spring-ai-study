@@ -6,7 +6,6 @@ import com.ranyk.spring.ai.demo.domain.vo.TopicBook;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBookReview;
 import com.ranyk.spring.ai.demo.utils.MathUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.audio.tts.TextToSpeechModel;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -55,7 +54,6 @@ public class ChatService {
      * Spring AI 需要调用的日期时间工具类 {@link DataTimeTool}
      */
     private final DataTimeTool dataTimeTool;
-    private final TextToSpeechModel textToSpeechModel;
 
     /**
      * 构造方法 - 向 ChatService 对象中注入 ChatClient 对象
@@ -73,14 +71,13 @@ public class ChatService {
                        ChatClient javaCounselorChatClient,
                        ChatClient dashscopeInMemoryChatMemoryChatClient,
                        OpenAiEmbeddingModel openAiEmbeddingModel,
-                       DataTimeTool dataTimeTool, TextToSpeechModel textToSpeechModel) {
+                       DataTimeTool dataTimeTool) {
         this.dashscopeChatClient = dashscopeChatClient;
         this.ollamaChatClient = ollamaChatClient;
         this.javaCounselorChatClient = javaCounselorChatClient;
         this.dashscopeInMemoryChatMemoryChatClient = dashscopeInMemoryChatMemoryChatClient;
         this.openAiEmbeddingModel = openAiEmbeddingModel;
         this.dataTimeTool = dataTimeTool;
-        this.textToSpeechModel = textToSpeechModel;
     }
 
     /**
