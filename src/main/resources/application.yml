@@ -15,6 +15,12 @@ spring:
         model: ${OPENAI_LLM_MODEL:qwen3.7-plus}
         # 配置大模型 chat 超时时间
         timeout: 120s
+      # 配置 嵌入式 参数
+      embedding:
+        # 配置 嵌入式 模型参数, 在对应 大模型的 官方文档中存在
+        model: ${EMBEDDING_LLM_MODEL:text-embedding-v4}
+        # 配置 嵌入式 模型的向量维度
+        dimensions: 2048
     # 本地 Ollama 配置
     ollama:
       # 配置 本地部署的 Ollama 的地址, 因为是在本机, 故使用如下地址, 如果部署在局域网内,只需要把 localhost 替换为对应的局域网地址
