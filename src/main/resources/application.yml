@@ -1,3 +1,25 @@
 spring:
   application:
     name: spring-ai-demo
+  # Spring AI 相关配置
+  ai:
+    # openai 配置
+    openai:
+      # 配置使用的 大模型 API KEY , 当前是使用已配置好的系统环境变量 DASHSCOPE_OPEN_AI_API_KEY 值, 注意, 当配置好环境变量时需要重启电脑才能生效
+      api-key: ${DASHSCOPE_OPEN_AI_API_KEY}
+      # 配置使用大模型的 Base URL 地址, 在对应 大模型的 官方文档中存在
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      # 配置大模型 chat client 参数
+      chat:
+        # 配置需要调用的 大模型 名称, 在对应 大模型的 官方文档中存在
+        model: ${OPENAI_LLM_MODEL:qwen3.7-plus}
+        # 配置大模型 chat 超时时间
+        timeout: 120s
+    # 本地 Ollama 配置
+    ollama:
+      # 配置 本地部署的 Ollama 的地址, 因为是在本机, 故使用如下地址, 如果部署在局域网内,只需要把 localhost 替换为对应的局域网地址
+      base-url: http://localhost:11434
+      # 配置 Ollama 的 chat client 参数
+      chat:
+        # 配置本地安装的 大模型 名称, 在对应的 Ollama 官方的 Model 中存在
+        model: ${OLLAMA_LLM_MODEL:deepseek-r1:1.5b}
