@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.ranyk</groupId>
-	<artifactId>spring-ai-demo</artifactId>
+	<artifactId>spring-ai-study</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>SpringAiDemoOne</name>
-	<description>SpringAiDemoOne</description>
+	<name>spring-ai-study</name>
+	<description>spring-ai-study</description>
 	<url/>
 	<licenses>
 		<license/>

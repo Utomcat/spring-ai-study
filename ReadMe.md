@@ -1,8 +1,8 @@
-# SpringAiDemoOne - Spring AI 大模型集成示例项目
+# spring-ai-study - Spring AI 大模型集成示例项目
 
 ## 📖 项目简介
 
-SpringAiDemoOne 是一个基于 **Spring Boot 4.1.1** 和 **Spring AI 2.0.0** 构建的大语言模型集成示例项目。该项目演示了如何使用
+spring-ai-study 是一个基于 **Spring Boot 4.1.1** 和 **Spring AI 2.0.0** 构建的大语言模型集成示例项目。该项目演示了如何使用
 Spring AI 框架集成多种大模型服务（阿里云百炼平台 qwen3.7-plus 和本地 Ollama deepseek-r1:1.5b），并展示了流式响应、会话记忆、结构化输出、工具调用等高级
 AI 功能。
 
@@ -25,7 +25,7 @@ AI 功能。
 ## 📁 项目结构
 
 ```
-SpringAiDemoOne/
+spring-ai-study/
 ├── src/main/java/com/ranyk/spring/ai/demo/
 │   ├── SpringAiDemoOneApplication.java      # 应用启动类
 │   ├── api/
@@ -189,7 +189,7 @@ spring:
 1. **克隆项目**
    ```bash
    git clone <repository-url>
-   cd SpringAiDemoOne
+   cd spring-ai-study
    ```
 
 2. **配置环境变量**
