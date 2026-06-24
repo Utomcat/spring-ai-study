@@ -1,5 +1,6 @@
 package com.ranyk.spring.ai.demo.service;
 
+import cn.hutool.json.JSONUtil;
 import com.ranyk.spring.ai.demo.ai.tool.DataTimeTool;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBook;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBookReview;
@@ -8,6 +9,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
@@ -45,6 +47,10 @@ public class ChatService {
      */
     private final ChatClient dashscopeInMemoryChatMemoryChatClient;
     /**
+     * 使用 OpenAI 的 嵌入式 模型 - 嵌入模型 {@link OpenAiEmbeddingModel}
+     */
+    private final OpenAiEmbeddingModel openAiEmbeddingModel;
+    /**
      * Spring AI 需要调用的日期时间工具类 {@link DataTimeTool}
      */
     private final DataTimeTool dataTimeTool;
@@ -56,6 +62,7 @@ public class ChatService {
      * @param ollamaChatClient                      使用 Ollama 引擎 调用 - 本地 - qwen3.6 大模型 - 聊天客户端对象 {@link ChatClient}
      * @param javaCounselorChatClient               使用 OpenAI 接口 调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 专用于 Java 信息咨询的聊天客户端对象 {@link ChatClient}
      * @param dashscopeInMemoryChatMemoryChatClient 使用 OpenAI 接口 调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 带有会话记忆存储功能 - 聊天客户端对象 {@link ChatClient}
+     * @param openAiEmbeddingModel                  使用 OpenAI 的 嵌入式 模型 - 嵌入模型 {@link OpenAiEmbeddingModel}
      * @param dataTimeTool                          Spring AI 需要调用的日期时间工具类 {@link DataTimeTool}
      */
     @Autowired
@@ -63,11 +70,13 @@ public class ChatService {
                        ChatClient ollamaChatClient,
                        ChatClient javaCounselorChatClient,
                        ChatClient dashscopeInMemoryChatMemoryChatClient,
+                       OpenAiEmbeddingModel openAiEmbeddingModel,
                        DataTimeTool dataTimeTool) {
         this.dashscopeChatClient = dashscopeChatClient;
         this.ollamaChatClient = ollamaChatClient;
         this.javaCounselorChatClient = javaCounselorChatClient;
         this.dashscopeInMemoryChatMemoryChatClient = dashscopeInMemoryChatMemoryChatClient;
+        this.openAiEmbeddingModel = openAiEmbeddingModel;
         this.dataTimeTool = dataTimeTool;
     }
 
@@ -285,5 +294,22 @@ public class ChatService {
                 .content();
         log.info("Current Use Dashscope Blockade Method, and Add DateTimeTool, LLM Response => {}", content);
         return content;
+    }
+
+    /**
+     * 聊天处理方法 -  使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - text-embedding-v4 大模型 - 嵌入式 模型 - 将文本转换为嵌入向量 - 阻塞式,等待所有结果一起返回
+     *
+     * @param text 需要转换的文本
+     * @return 嵌入向量结果
+     */
+    public String dashscopeEmbeddingConvertText(String text) {
+        log.info("Current Use Dashscope Embedding Method, Convert Text to Embedding => {}", text);
+        // 调用 OpenAI 嵌入式模型, 将文本转换为嵌入向量, 并将转换结果返回为一个 float 数组
+        float[] floats = openAiEmbeddingModel.embed(text);
+        // 将 float 数组转换为 JSON 字符串
+        String floatsString = JSONUtil.toJsonStr(floats);
+        log.info("Current Use Dashscope Embedding Method, Converted text from the original text => {}, The result of the transformation => {}", text, floatsString);
+        // 返回调用 嵌入式 模型将文本转换后的嵌入向量结果
+        return floatsString;
     }
 }

@@ -198,6 +198,17 @@ public class ChatApi {
     }
 
     /**
+     * 聊天接口 - 使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - text-embedding-v4 大模型 - 文本嵌入 - 转换文本为向量 - 阻塞式,等待所有结果一起返回
+     *
+     * @param text 用户输入的文本字符串
+     * @return 返回聊天结果 {@link Result} 泛型对象, 封装了结果数据
+     */
+    @GetMapping("/dashscope/embedding/convert/text")
+    public Result<String> dashscopeEmbeddingConvertText(String text) {
+        return Result.success(chatService.dashscopeEmbeddingConvertText(text));
+    }
+
+    /**
      * 构建 SSE 事件对象
      *
      * @param eventType 事件类型
