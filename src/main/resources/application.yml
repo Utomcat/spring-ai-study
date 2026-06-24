@@ -1,6 +1,9 @@
 spring:
+  # 配置应用信息
   application:
+    # 配置应用名称
     name: spring-ai-demo
+
   # Spring AI 相关配置
   ai:
     # openai 配置
@@ -21,7 +24,7 @@ spring:
         model: ${EMBEDDING_LLM_MODEL:text-embedding-v4}
         # 配置 嵌入式 模型的向量维度
         dimensions: 2048
-    # 本地 Ollama 配置
+    # 本地 Ollama 配置 (需要在本地部署 Ollama)
     ollama:
       # 配置 本地部署的 Ollama 的地址, 因为是在本机, 故使用如下地址, 如果部署在局域网内,只需要把 localhost 替换为对应的局域网地址
       base-url: http://localhost:11434
@@ -29,3 +32,46 @@ spring:
       chat:
         # 配置本地安装的 大模型 名称, 在对应的 Ollama 官方的 Model 中存在
         model: ${OLLAMA_LLM_MODEL:deepseek-r1:1.5b}
+    # 模型配置
+    model:
+      # 配置嵌入式模型, 使用 OpenAI 进行模型调用
+      embedding: openai
+    # 向量存储配置
+    vectorstore:
+      # 使用 Redis 进行向量存储
+      redis:
+        # 是否在启动时创建/初始化向量索引等结构
+        initialize-schema: true
+        # RedisSearch 里的 索引名
+        index-name: ranyk_index
+        # 存向量文档用的 Redis 键前缀
+        prefix: ranyk_vector_
+
+  # 数据源配置
+  data:
+    # 配置 Redis 数据源
+    redis:
+      # 配置 Redis 客户端类型
+      client-type: jedis
+      # 配置 Redis 服务器地址
+      host: 192.168.31.83
+      # 配置 Redis 服务器端口
+      port: 16380
+      # 配置使用 Redis 的那个数据库 (在 Redis Stack 向量数据库时, 好像无法生效, 所有的向量存储均存放在 0 号数据库)
+      database: 0
+      # 配置 Jedis 参数
+      jedis:
+        # 配置 Jedis 连接池参数
+        pool:
+          # 配置是否启用 Jedis 连接池
+          enabled: false
+
+
+# 日志配置
+logging:
+  # 配置日志级别
+  level:
+    # 配置 Spring AI 的日志级别为 debug
+    org.springframework.ai: debug
+    # 配置项目日志级别为 debug
+    com.ranyk.spring.ai.demo: debug
