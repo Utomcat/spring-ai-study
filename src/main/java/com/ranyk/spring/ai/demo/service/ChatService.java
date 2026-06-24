@@ -1,0 +1,289 @@
+package com.ranyk.spring.ai.demo.service;
+
+import com.ranyk.spring.ai.demo.ai.tool.DataTimeTool;
+import com.ranyk.spring.ai.demo.domain.vo.TopicBook;
+import com.ranyk.spring.ai.demo.domain.vo.TopicBookReview;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * CLASS_NAME: ChatService.java
+ *
+ * @author ranyk
+ * @version V1.0
+ * @description: 聊天业务逻辑处理类
+ * @date: 2026-06-22
+ */
+@Slf4j
+@Service
+public class ChatService {
+
+    /**
+     * 使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 不带会话记忆存储功能 - 聊天客户端对象 {@link ChatClient}
+     */
+    private final ChatClient dashscopeChatClient;
+    /**
+     * 使用 Ollama 接口调用 - 本地 - qwen3.6 大模型 - 聊天客户端对象 {@link ChatClient}
+     */
+    private final ChatClient ollamaChatClient;
+    /**
+     * 使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 专用于 Java 信息咨询的聊天客户端对象 {@link ChatClient}
+     */
+    private final ChatClient javaCounselorChatClient;
+    /**
+     * 使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 带有会话记忆存储功能 - 聊天客户端对象 {@link ChatClient}
+     */
+    private final ChatClient dashscopeInMemoryChatMemoryChatClient;
+    /**
+     * Spring AI 需要调用的日期时间工具类 {@link DataTimeTool}
+     */
+    private final DataTimeTool dataTimeTool;
+
+    /**
+     * 构造方法 - 向 ChatService 对象中注入 ChatClient 对象
+     *
+     * @param dashscopeChatClient                   使用 OpenAI 接口 调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 不带会话记忆存储功能 - 聊天客户端对象 {@link ChatClient}
+     * @param ollamaChatClient                      使用 Ollama 引擎 调用 - 本地 - qwen3.6 大模型 - 聊天客户端对象 {@link ChatClient}
+     * @param javaCounselorChatClient               使用 OpenAI 接口 调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 专用于 Java 信息咨询的聊天客户端对象 {@link ChatClient}
+     * @param dashscopeInMemoryChatMemoryChatClient 使用 OpenAI 接口 调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 带有会话记忆存储功能 - 聊天客户端对象 {@link ChatClient}
+     * @param dataTimeTool                          Spring AI 需要调用的日期时间工具类 {@link DataTimeTool}
+     */
+    @Autowired
+    public ChatService(ChatClient dashscopeChatClient,
+                       ChatClient ollamaChatClient,
+                       ChatClient javaCounselorChatClient,
+                       ChatClient dashscopeInMemoryChatMemoryChatClient,
+                       DataTimeTool dataTimeTool) {
+        this.dashscopeChatClient = dashscopeChatClient;
+        this.ollamaChatClient = ollamaChatClient;
+        this.javaCounselorChatClient = javaCounselorChatClient;
+        this.dashscopeInMemoryChatMemoryChatClient = dashscopeInMemoryChatMemoryChatClient;
+        this.dataTimeTool = dataTimeTool;
+    }
+
+    /**
+     * 聊天处理方法 -  使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型
+     *
+     * @param question 用户输入的提问
+     * @return 聊天处理结果
+     */
+    public String dashscope(String question) {
+        log.info("Current Use Dashscope Blockade Method, User Input Question => {}", question);
+        return dashscopeChatClient
+                // 创建一个提示词对象
+                .prompt()
+                // 添加用户输入的提问
+                .user(question)
+                // 调用大模型并返回结果
+                .call()
+                // 获取大模型的回复内容
+                .content();
+    }
+
+    /**
+     * 聊天处理方法 -  使用 Ollama 接口调用 - 本地 - deepseek-r1:1.5b 大模型
+     *
+     * @param question 用户输入的提问
+     * @return 聊天处理结果
+     */
+    public String ollama(String question) {
+        log.info("Current Use Ollama Blockade Method, User Input Question => {}", question);
+        return ollamaChatClient
+                // 创建一个提示词对象
+                .prompt()
+                // 添加用户输入的提问
+                .user(question)
+                // 调用大模型并返回结果
+                .call()
+                // 获取大模型的回复内容
+                .content();
+    }
+
+    /**
+     * 聊天处理方法 -  使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 流式返回
+     *
+     * @param question 用户输入的提问
+     * @return 聊天处理结果
+     */
+    public Flux<String> dashscopeStream(String question) {
+        log.info("Current Use Dashscope Stream Method, User Input Question => {}", question);
+        return dashscopeChatClient
+                // 创建一个提示词对象
+                .prompt()
+                // 添加用户输入的提问
+                .user(question)
+                // 调用大模型并返回结果
+                .stream()
+                // 获取大模型的回复内容
+                .content();
+    }
+
+    /**
+     * 聊天处理方法 -  使用 Ollama 接口调用 - 本地 - deepseek-r1:1.5b 大模型 - 流式返回
+     *
+     * @param question 用户输入的提问
+     * @return 聊天处理结果
+     */
+    public Flux<String> ollamaStream(String question) {
+        log.info("Current Use Ollama Stream Method, User Input Question => {}", question);
+        return ollamaChatClient
+                // 创建一个提示词对象
+                .prompt()
+                // 添加用户输入的提问
+                .user(question)
+                // 调用大模型并返回结果
+                .stream()
+                // 获取大模型的回复内容
+                .content();
+    }
+
+    /**
+     * 聊天处理方法 -  使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 使用提示词 - 流式返回
+     *
+     * @param topic 提示词
+     * @return 响应结果信息 - 流式返回
+     */
+    public Flux<String> topicDashscopeStream(String topic) {
+        log.info("Current Use Dashscope Topic Method, Set prompt and use PromptTemplate, User Input Topic => {}", topic);
+        // 创建一个提示词模板对象
+        PromptTemplate promptTemplate = new PromptTemplate("请简要的介绍一下 {topic}");
+        // 设置提示词参数
+        Prompt prompt = promptTemplate.create(Map.of("topic", topic));
+        return dashscopeChatClient
+                // 设置提示词
+                .prompt(prompt)
+                // 调用大模型并返回结果
+                .stream()
+                // 获取大模型的回复内容
+                .content();
+    }
+
+    /**
+     * 聊天处理方法 -  使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 使用提示词 - 流式返回 - 系统提示词
+     *
+     * @param topic 提示词
+     * @return 响应结果信息 - 流式返回
+     */
+    public Flux<String> topicDashscopeSystemStream(String topic) {
+        log.info("Current Use Dashscope Topic Method, Set system prompt and user prompt, User Input Topic => {}", topic);
+        return dashscopeChatClient.prompt()
+                // 设置系统提示词
+                .system("你是一个专业的书评助手")
+                // 设置用户提示词
+                .user(u -> u.text("请向我推荐三本关于 {topic} 的书籍, 请只给出书籍名称").param("topic", topic))
+                // 调用大模型并返回结果
+                .stream()
+                // 获取大模型的回复内容
+                .content();
+    }
+
+    /**
+     * 聊天处理方法 -  使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 专用于 Java 信息咨询的处理 - 流式返回
+     *
+     * @param topic 提示词
+     * @return 响应结果信息 - 流式返回
+     */
+    public Flux<String> topicDashscopeDefaultSystemStream(String topic) {
+        log.info("Current Use Dashscope Topic Method, Call Java Counselor Chat Client, Set user prompt, use stream return, User Input Topic => {}", topic);
+        return javaCounselorChatClient.prompt()
+                // 设置用户提示词
+                .user(topic)
+                // 调用大模型并返回结果
+                .stream()
+                // 获取大模型的回复内容
+                .content();
+    }
+
+    /**
+     * 聊天处理方法 -  使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 使用 system 提示 - 用户 user 提示词 - 结构化输出 - 阻塞式,等待所有结果一起返回
+     *
+     * @param topic 提示词
+     * @return 响应结果信息 - 结构化输出 - 实体类返回
+     */
+    public TopicBook topicDashscopeStructOutputEntityCall(String topic) {
+        log.info("Current Use Dashscope Blockade Method, User Input Topic => {}", topic);
+        TopicBook topicBook = dashscopeChatClient.prompt()
+                // 设置系统提示词
+                .system("你是一个专业的书评助手")
+                // 设置用户提示词
+                .user(u -> u.text("请向我推荐三本关于 {topic} 的书籍, 只需要返回书名即可").param("topic", topic))
+                // 调用大模型并返回结果
+                .call()
+                // 将大模型调用响应结果转换为 TopicBook 实体类对象返回
+                .entity(TopicBook.class);
+        log.info("Current Use Dashscope Blockade Method, User Input Topic => {}, TopicBook => {}", topic, topicBook);
+        return topicBook;
+    }
+
+    /**
+     * 聊天处理方法 -  使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 使用用户 user 提示词 - 结构化输出 - 阻塞式,等待所有结果一起返回
+     *
+     * @param bookName 书籍名称
+     * @return 响应结果信息 - 结构化输出 - 实体类 List 集合返回
+     */
+    public List<TopicBookReview> topicDashscopeStructOutputEntityListCall(String bookName) {
+        log.info("Current Use Dashscope Blockade Method, Return List<TopicBookReview>, User Input bookName => {}", bookName);
+        List<TopicBookReview> topicBookReviewList = dashscopeChatClient.prompt()
+                // 添加用户输入的提问
+                .user(u -> u.text("请给{bookName}书籍三条评价信息").param("bookName", bookName))
+                // 调用大模型并返回结果
+                .call()
+                // 将大模型调用响应结果转换为 TopicBookReview 实体类对象 List 返回
+                .entity(new ParameterizedTypeReference<>() {
+                });
+        log.info("Current Use Dashscope Blockade Method, Return List<TopicBookReview>, User Input bookName => {}, TopicBookReviewList => {}", bookName, topicBookReviewList);
+        return topicBookReviewList;
+    }
+
+    /**
+     * 聊天处理方法 -  使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 使用用户 user 提示词 - 带会话记忆 - 流式返回结果
+     *
+     * @param question       用户输入的提问
+     * @param conversationId 会话ID
+     * @return 聊天处理结果
+     */
+    public Flux<String> questionStreamChatMemory(String question, String conversationId) {
+        log.info("Current Use Dashscope Stream Method, and Storing session information, User Input Question => {}, ConversationId => {}", question, conversationId);
+        return dashscopeInMemoryChatMemoryChatClient.prompt()
+                // 添加用户输入的提问
+                .user(question)
+                // 设置会话ID
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
+                // 调用大模型并返回结果
+                .stream()
+                // 获取大模型的回复内容
+                .content();
+
+    }
+
+    /**
+     * 聊天处理方法 -  使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 并添加日期时间工具类(工具功能有: 获取当前时间) - 回答用户问题 - 阻塞式,等待所有结果一起返回
+     *
+     * @param question 用户输入的提问
+     * @return 聊天处理结果
+     */
+    public String dashscopeAddDateTimeToolAnsweringUserQuestions(String question) {
+        log.info("Current Use Dashscope Blockade Method, and Add DateTimeTool, User Input Question => {}", question);
+        String content = dashscopeChatClient.prompt()
+                // 添加用户输入的提问
+                .user(question)
+                // 添加 AI 需要调用的工具, 可传入多个工具
+                .tools(dataTimeTool)
+                // 调用大模型并返回结果
+                .call()
+                // 获取大模型的回复内容
+                .content();
+        log.info("Current Use Dashscope Blockade Method, and Add DateTimeTool, LLM Response => {}", content);
+        return content;
+    }
+}
