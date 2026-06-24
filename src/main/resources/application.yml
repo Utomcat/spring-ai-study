@@ -75,3 +75,12 @@ logging:
     org.springframework.ai: debug
     # 配置项目日志级别为 debug
     com.ranyk.spring.ai.demo: debug
+
+# 自定义配置 - 向量配置
+vector:
+  # 自定义配置 - 向量数据配置
+  data:
+    # 自定义配置 - 向量数据删除配置
+    delete:
+      # 自定义配置 - 向量数据删除每批次数量
+      batch-quantity: 100
