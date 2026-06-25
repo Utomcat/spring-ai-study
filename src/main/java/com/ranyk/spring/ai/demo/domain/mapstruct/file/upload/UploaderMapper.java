@@ -1,4 +1,4 @@
-package com.ranyk.spring.ai.demo.domain.mapstruct;
+package com.ranyk.spring.ai.demo.domain.mapstruct.file.upload;
 
 import com.ranyk.spring.ai.demo.domain.dto.UploaderDTO;
 import com.ranyk.spring.ai.demo.domain.request.UploaderRequest;
