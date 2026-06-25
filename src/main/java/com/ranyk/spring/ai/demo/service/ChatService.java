@@ -7,6 +7,7 @@ import com.ranyk.spring.ai.demo.common.domain.metadata.VectorDataMetaData;
 import com.ranyk.spring.ai.demo.common.exception.ServiceException;
 import com.ranyk.spring.ai.demo.config.properties.FileProperties;
 import com.ranyk.spring.ai.demo.config.properties.VectorProperties;
+import com.ranyk.spring.ai.demo.domain.dto.QuerySimilarityFileDTO;
 import com.ranyk.spring.ai.demo.domain.dto.UploaderDTO;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBook;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBookReview;
@@ -14,6 +15,7 @@ import com.ranyk.spring.ai.demo.utils.DocumentParseUtils;
 import com.ranyk.spring.ai.demo.utils.MathUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -106,14 +108,7 @@ public class ChatService {
      * @param tokenTextSplitter                     TokenTextSplitter 对象 - 用于将 Document 按 Token 进行拆分, 生成多个 chunk (文本块)
      */
     @Autowired
-    public ChatService(ChatClient dashscopeChatClient,
-                       ChatClient ollamaChatClient,
-                       ChatClient javaCounselorChatClient,
-                       ChatClient dashscopeInMemoryChatMemoryChatClient,
-                       OpenAiEmbeddingModel openAiEmbeddingModel,
-                       VectorStore vectorStore,
-                       RedisVectorStore redisVectorStore,
-                       DataTimeTool dataTimeTool, VectorProperties vectorProperties, FileProperties fileProperties, TokenTextSplitter tokenTextSplitter) {
+    public ChatService(ChatClient dashscopeChatClient, ChatClient ollamaChatClient, ChatClient javaCounselorChatClient, ChatClient dashscopeInMemoryChatMemoryChatClient, OpenAiEmbeddingModel openAiEmbeddingModel, VectorStore vectorStore, RedisVectorStore redisVectorStore, DataTimeTool dataTimeTool, VectorProperties vectorProperties, FileProperties fileProperties, TokenTextSplitter tokenTextSplitter) {
         this.dashscopeChatClient = dashscopeChatClient;
         this.ollamaChatClient = ollamaChatClient;
         this.javaCounselorChatClient = javaCounselorChatClient;
@@ -438,8 +433,7 @@ public class ChatService {
                         // 设置查询相似的 文本内容
                         .query(text)
                         // 设置查询相似的文本数量
-                        .topK(2)
-                        .build());
+                        .topK(2).build());
         log.info("Current Use OpenAI Vector Store Method, Query Similarity User Input Text, Similarity Search Size => {} , Result => {}", documents.size(), JSONUtil.toJsonStr(documents));
         return JSONUtil.toJsonStr(documents);
     }
@@ -502,10 +496,7 @@ public class ChatService {
         Integer batchQuantity = vectorProperties.getVectorData().getDelete().getBatchQuantity();
         int batchCount = (int) Math.ceil(count / (double) batchQuantity);
         for (int i = 0; i < batchCount; i++) {
-            List<String> ids = redisVectorStore.similaritySearch(SearchRequest.builder()
-                    .query("")
-                    .topK(batchQuantity)
-                    .build()).stream().map(Document::getId).toList();
+            List<String> ids = redisVectorStore.similaritySearch(SearchRequest.builder().query("").topK(batchQuantity).build()).stream().map(Document::getId).toList();
             redisVectorStore.delete(ids);
         }
         log.info("Current Use OpenAI Vector Store Method, Delete All Documents size => {}, Result => {}", count, "Success");
@@ -544,13 +535,7 @@ public class ChatService {
             String filePath = fileSaveDir + File.separator + originalFilename;
             try {
                 file.transferTo(new File(filePath));
-                vectorDataMetaDataList.add(VectorDataMetaData.builder()
-                        .documentId(IdUtil.simpleUUID())
-                        .source(filePath)
-                        .fileName(originalFilename)
-                        .category(uploaderDTO.getCategory())
-                        .uploader(uploaderDTO.getUploader())
-                        .build());
+                vectorDataMetaDataList.add(VectorDataMetaData.builder().documentId(IdUtil.simpleUUID()).source(filePath).fileName(originalFilename).category(uploaderDTO.getCategory()).uploader(uploaderDTO.getUploader()).build());
             } catch (IOException e) {
                 throw new ServiceException("business.anomalies.occur", new Object[]{"文件上传失败: %s".formatted(originalFilename)});
             }
@@ -578,4 +563,34 @@ public class ChatService {
         return "Success";
     }
 
+    /**
+     * 对上传的文件保存至向量数据库中的数据进行相似性检索
+     *
+     * @param querySimilarityFileDTO 查询参数数据传输对象 {@link QuerySimilarityFileDTO}
+     * @return 搜索结果 {@link List}<{@link Document}>
+     */
+    public String similaritySearchToVectorStoreFile(QuerySimilarityFileDTO querySimilarityFileDTO) {
+        log.info("Current Use OpenAI Vector Store, Similarity Search, Query Parameters => {}", JSONUtil.toJsonStr(querySimilarityFileDTO));
+        List<Document> documentList = redisVectorStore.similaritySearch(SearchRequest.builder().query(querySimilarityFileDTO.getText()).topK(5).build());
+        log.info("Current Use OpenAI Vector Store, Similarity Search, Query Result => {}", JSONUtil.toJsonStr(documentList));
+        return JSONUtil.toJsonStr(documentList);
+    }
+
+    /**
+     * 使用 QuestionAnswerAdvisor 实现向量数据的相似性检索增强
+     *
+     * @param querySimilarityFileDTO 查询参数数据传输对象 {@link QuerySimilarityFileDTO}
+     * @return 搜索结果 {@link String}
+     */
+    public String similaritySearchToVectorStoreFileWithQuestionAnswerAdvisor(QuerySimilarityFileDTO querySimilarityFileDTO) {
+        log.info("Current Use OpenAI Vector Store, Similarity Search With Question Answer Advisor, Query Parameters => {}", JSONUtil.toJsonStr(querySimilarityFileDTO));
+        QuestionAnswerAdvisor questionAnswerAdvisor = QuestionAnswerAdvisor.builder(redisVectorStore).searchRequest(SearchRequest.builder()
+                // 相似度阈值 [0,1] 值越大要求越严格 过滤低相关性的结果, 提高 LLM 回答质量
+                .similarityThreshold(0.7)
+                // 查询结果数量
+                .topK(1).build()).build();
+        String searchResult = dashscopeChatClient.prompt().advisors(questionAnswerAdvisor).user(querySimilarityFileDTO.getText()).call().content();
+        log.info("Current Use OpenAI Vector Store, Similarity Search With Question Answer Advisor, Query Result => {}", searchResult);
+        return searchResult;
+    }
 }

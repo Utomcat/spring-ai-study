@@ -3,7 +3,9 @@ package com.ranyk.spring.ai.demo.api;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import com.ranyk.spring.ai.demo.common.domain.vo.Result;
-import com.ranyk.spring.ai.demo.domain.mapstruct.UploaderMapper;
+import com.ranyk.spring.ai.demo.domain.mapstruct.file.query.QuerySimilarityFileMapper;
+import com.ranyk.spring.ai.demo.domain.mapstruct.file.upload.UploaderMapper;
+import com.ranyk.spring.ai.demo.domain.request.QuerySimilarityFileRequest;
 import com.ranyk.spring.ai.demo.domain.request.UploaderRequest;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBook;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBookReview;
@@ -38,17 +40,23 @@ public class ChatApi {
      * 文件上传基础数据转换映射接口对象
      */
     private final UploaderMapper uploaderMapper;
+    /**
+     * 文件相似度查询基础数据转换映射接口对象
+     */
+    private final QuerySimilarityFileMapper querySimilarityFileMapper;
 
     /**
      * 构造方法 - 向 Spring IOC 容器中注入有关业务逻辑处理类对象
      *
-     * @param chatService    聊天服务对象
-     * @param uploaderMapper 文件上传基础数据转换映射接口对象
+     * @param chatService               聊天服务对象
+     * @param uploaderMapper            文件上传基础数据转换映射接口对象
+     * @param querySimilarityFileMapper 文件相似度查询基础数据转换映射接口对象
      */
     @Autowired
-    public ChatApi(ChatService chatService, UploaderMapper uploaderMapper) {
+    public ChatApi(ChatService chatService, UploaderMapper uploaderMapper, QuerySimilarityFileMapper querySimilarityFileMapper) {
         this.chatService = chatService;
         this.uploaderMapper = uploaderMapper;
+        this.querySimilarityFileMapper = querySimilarityFileMapper;
     }
 
     /**
@@ -296,6 +304,28 @@ public class ChatApi {
                 .filter(file -> file != null && StrUtil.isNotBlank(file.getOriginalFilename()) && file.getSize() > 0)
                 .toList();
         return Result.success(chatService.uploadFileAndVectorStore(validFiles, uploaderMapper.uploaderRequestToUploaderDTO(uploaderRequest)));
+    }
+
+    /**
+     * 调用 ChatService 的文件相似度查询方法, 依据用户传入的文件信息进行文件相似度查询
+     *
+     * @param querySimilarityFileRequest 文件相似度查询请求参数 {@link QuerySimilarityFileRequest}
+     * @return 文件相似度查询结果 {@link Result} 泛型对象, 封装了结果数据
+     */
+    @GetMapping("/similarity/search/vector/store/file")
+    public Result<String> similaritySearchToVectorStoreFile(@ModelAttribute QuerySimilarityFileRequest querySimilarityFileRequest) {
+        return Result.success(chatService.similaritySearchToVectorStoreFile(querySimilarityFileMapper.querySimilarityFileRequestToQuerySimilarityFileDTO(querySimilarityFileRequest)));
+    }
+
+    /**
+     * 调用 ChatService 的 QuestionAnswerAdvisor  RAG 检索增强对文件相似度查询方法, 依据用户传入的文件信息进行文件相似度查询, 并返回相似文件内容, 以及文件内容中与问题最相似的句子, 并返回句子对应的答案
+     *
+     * @param querySimilarityFileRequest 文件相似度查询请求参数 {@link QuerySimilarityFileRequest}
+     * @return 文件相似度查询结果 {@link Result} 泛型对象, 封装了结果数据
+     */
+    @GetMapping("/similarity/search/vector/store/file/with/question/answer/advisor")
+    public Result<String> similaritySearchToVectorStoreFileWithQuestionAnswerAdvisor(@ModelAttribute QuerySimilarityFileRequest querySimilarityFileRequest) {
+        return Result.success(chatService.similaritySearchToVectorStoreFileWithQuestionAnswerAdvisor(querySimilarityFileMapper.querySimilarityFileRequestToQuerySimilarityFileDTO(querySimilarityFileRequest)));
     }
 
     /**
