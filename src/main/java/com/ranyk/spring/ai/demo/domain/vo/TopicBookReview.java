@@ -1,5 +1,7 @@
 package com.ranyk.spring.ai.demo.domain.vo;
 
+import java.io.Serializable;
+
 /**
  * CLASS_NAME: TopicBookReview.java
  *
@@ -13,5 +15,5 @@ package com.ranyk.spring.ai.demo.domain.vo;
  * </ul>
  * @date: 2026-06-23
  */
-public record TopicBookReview(String user, int score, String content) {
+public record TopicBookReview(String user, int score, String content) implements Serializable {
 }

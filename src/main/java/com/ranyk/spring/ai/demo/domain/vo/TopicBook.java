@@ -1,5 +1,6 @@
 package com.ranyk.spring.ai.demo.domain.vo;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -14,5 +15,5 @@ import java.util.List;
  * </ul>
  * @date: 2026-06-23
  */
-public record TopicBook(String topic, List<String> books) {
+public record TopicBook(String topic, List<String> books) implements Serializable {
 }
