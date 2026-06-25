@@ -8,12 +8,17 @@
         <version>4.1.1-SNAPSHOT</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
+
     <groupId>com.ranyk</groupId>
     <artifactId>spring-ai-study</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+
     <name>spring-ai-study</name>
+
     <description>spring-ai-study</description>
+
     <url>https://github.com/Utomcat/spring-ai-study</url>
+
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
@@ -21,6 +26,7 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+
     <developers>
         <developer>
             <!-- 开发者ID -->
@@ -42,6 +48,7 @@
             <timezone>+8</timezone>
         </developer>
     </developers>
+
     <scm>
         <!-- 只读连接：任何人都可以克隆 -->
         <connection>scm:git:https://github.com/Utomcat/spring-ai-study.git</connection>
@@ -52,26 +59,33 @@
         <!-- 当前版本的 tag，通常是 HEAD -->
         <tag>HEAD</tag>
     </scm>
+
     <properties>
         <java.version>21</java.version>
         <spring-ai.version>2.0.0</spring-ai.version>
     </properties>
+
     <dependencies>
+        <!-- spring-boot-starter-webmvc -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
+
+        <!-- spring-ai-starter-model-openai -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-openai</artifactId>
         </dependency>
 
+        <!-- spring-boot-starter-webmvc-test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
 
+        <!-- spring-boot-starter-test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -109,6 +123,7 @@
             <version>0.2.0</version>
             <scope>compile</scope>
         </dependency>
+
         <!-- Source: https://mvnrepository.com/artifact/cn.hutool/hutool-all -->
         <dependency>
             <groupId>cn.hutool</groupId>
@@ -116,15 +131,20 @@
             <version>5.8.46</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- spring-ai-starter-model-ollama -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-ollama</artifactId>
         </dependency>
+
+        <!-- spring-boot-configuration-processor -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
             <scope>compile</scope>
         </dependency>
+
         <!-- Source: https://mvnrepository.com/artifact/javazoom/jlayer -->
         <dependency>
             <groupId>javazoom</groupId>
@@ -132,6 +152,8 @@
             <version>1.0.1</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- spring-boot-starter-data-redis -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
@@ -142,10 +164,13 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <!-- spring-ai-starter-vector-store-redis -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-vector-store-redis</artifactId>
         </dependency>
+
         <!-- Source: https://mvnrepository.com/artifact/redis.clients/jedis -->
         <dependency>
             <groupId>redis.clients</groupId>
@@ -153,15 +178,32 @@
             <version>8.0.0-beta1</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- spring-ai-markdown-document-reader -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-markdown-document-reader</artifactId>
         </dependency>
+
+        <!-- spring-ai-tika-document-reader -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-tika-document-reader</artifactId>
         </dependency>
+
+        <!-- Source: https://mvnrepository.com/artifact/org.springframework.ai/spring-ai-redis-store -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-redis-store</artifactId>
+        </dependency>
+
+        <!-- spring-ai-advisors-vector-store -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-vector-store-advisor</artifactId>
+        </dependency>
     </dependencies>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -253,6 +295,7 @@
             </resource>
         </resources>
     </build>
+
     <repositories>
         <repository>
             <id>spring-snapshots</id>
@@ -263,6 +306,7 @@
             </releases>
         </repository>
     </repositories>
+
     <pluginRepositories>
         <pluginRepository>
             <id>spring-snapshots</id>
