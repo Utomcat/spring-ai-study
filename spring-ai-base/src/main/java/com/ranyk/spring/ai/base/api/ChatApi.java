@@ -229,7 +229,7 @@ public class ChatApi {
      * 聊天接口 - 使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - text-embedding-v4 大模型 - 多文本嵌入 - 转换文本为向量, 并两两计算相对应的距离, 通过传入的 type 参数指定计算方式 - 阻塞式,等待所有结果一起返回
      *
      * @param texts 用户输入的多个文本字符串 List 集合
-     * @param type  距离计算方式类型, 1: 表示欧式距离计算方式; 2: 表示余弦距离计算方式; 3: 表示其他距离计算方式; 具体参见 {@link com.ranyk.spring.ai.demo.utils.MathUtils.DistanceTypeEnum} 类
+     * @param type  距离计算方式类型, 1: 表示欧式距离计算方式; 2: 表示余弦距离计算方式; 3: 表示其他距离计算方式; 具体参见 {@link com.ranyk.spring.ai.base.utils.MathUtils.DistanceTypeEnum} 类
      * @return 返回聊天结果 {@link Result} 泛型对象, 封装了结果数据
      */
     @GetMapping("/dashscope/embedding/convert/multi/text")
