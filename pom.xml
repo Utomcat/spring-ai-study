@@ -23,6 +23,7 @@
 
     <modules>
         <module>spring-ai-base</module>
+        <module>spring-ai-mcp-server</module>
     </modules>
 
     <licenses>
@@ -159,6 +160,13 @@
             <dependency>
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-vector-store-advisor</artifactId>
+                <version>${spring-ai.version}</version>
+            </dependency>
+
+            <!-- spring-ai-starter-mcp-server-webmvc -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
                 <version>${spring-ai.version}</version>
             </dependency>
 
