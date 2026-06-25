@@ -4,15 +4,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * CLASS_NAME: RedisConfig.java
+ * CLASS_NAME: EmbeddingModelConfiguration.java
  *
  * @author ranyk
  * @version V1.0
- * @description: Redis 配置类
- * @date: 2026-06-24
+ * @description: 嵌入式模型配置类
+ * @date: 2026-06-25
  */
 @Slf4j
 @Configuration
-public class RedisConfig {
-
+public class EmbeddingModelConfiguration {
 }

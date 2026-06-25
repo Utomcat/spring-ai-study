@@ -1,9 +1,9 @@
 package com.ranyk.spring.ai.demo.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -12,7 +12,7 @@ import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import java.nio.charset.StandardCharsets;
 
 /**
- * CLASS_NAME: I18nConfigure.java
+ * CLASS_NAME: I18nConfiguration.java
  *
  * @author ranyk
  * @version V1.0
@@ -20,8 +20,8 @@ import java.nio.charset.StandardCharsets;
  * @date: 2026-06-25
  */
 @Slf4j
-@AutoConfiguration
-public class I18nConfigure implements WebMvcConfigurer {
+@Configuration
+public class I18nConfiguration implements WebMvcConfigurer {
 
     /**
      * 配置国际化消息源 Bean

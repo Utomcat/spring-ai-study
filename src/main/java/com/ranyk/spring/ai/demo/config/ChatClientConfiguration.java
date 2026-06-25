@@ -5,11 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,12 +15,12 @@ import org.springframework.context.annotation.Configuration;
  *
  * @author ranyk
  * @version V1.0
- * @description: openai 的相关配置
+ * @description: ChatClient 配置类
  * @date: 2026-06-22
  */
 @Slf4j
 @Configuration
-public class OpenAiConfiguration {
+public class ChatClientConfiguration {
 
     /**
      * 创建 ChatClient 对象 - 使用 OpenAI 接口调用 - 阿里云 - 百炼云平台 - qwen3.7-plus 大模型 - 不带会话记忆存储功能
@@ -117,37 +114,5 @@ public class OpenAiConfiguration {
                 .defaultAdvisors(mySimpleLoggerAdvisor)
                 // 构建 ChatClient 对象
                 .build();
-    }
-
-    /**
-     * 创建 ChatMemory 对象, 用于在 ChatClient 和 ChatModel 之间进行会话记忆
-     *
-     * @return 返回创建好的 ChatMemory 对象 {@link ChatMemory} 对象
-     */
-    @Bean
-    public ChatMemory inMemoryChatMemory() {
-        return MessageWindowChatMemory.builder()
-                // 设置最大消息数, 超过指定的消息数, 会自动删除最旧的消息
-                .maxMessages(10)
-                // 设置聊天内存仓库 - 当前配置为内存存储; 可选项有:
-                // InMemoryChatMemoryRepository: 内存存储, 系统默认, 无需额外引入
-                // RedisChatMemoryRepository: redis 存储, 需要额外引入依赖: spring-ai-starter-chat-memory-redis  和 spring-boot-starter-data-redis
-                // JdbcChatMemoryRepository: jdbc 存储, 需要额外引入依赖: spring-ai-starter-model-chat-memory-repository-jdbc  和 对应的关系型数据库 Java 驱动
-                // CassandraChatMemoryRepository: Cassandra 存储, 需要额外引入依赖: spring-ai-starter-model-chat-memory-repository-cassandra  和 Cassandra 的驱动
-                // etc.
-                .chatMemoryRepository(new InMemoryChatMemoryRepository())
-                .build();
-    }
-
-    /**
-     * 创建 MySimpleLoggerAdvisor 对象
-     *
-     * @return 返回创建好的 MySimpleLoggerAdvisor 对象 {@link MySimpleLoggerAdvisor}
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public MySimpleLoggerAdvisor mySimpleLoggerAdvisor() {
-        log.info("Create Customization Advisor Object: MySimpleLoggerAdvisor Object , Used to enhance ChatClient functionality");
-        return new MySimpleLoggerAdvisor();
     }
 }

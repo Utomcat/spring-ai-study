@@ -9,7 +9,7 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * CLASS_NAME: FaviconConfig.java
+ * CLASS_NAME: FaviconConfiguration.java
  *
  * @author ranyk
  * @version V1.0
@@ -18,7 +18,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  */
 @Slf4j
 @Configuration
-public class FaviconConfig implements WebMvcConfigurer {
+public class FaviconConfiguration implements WebMvcConfigurer {
 
     /**
      * 添加资源处理器

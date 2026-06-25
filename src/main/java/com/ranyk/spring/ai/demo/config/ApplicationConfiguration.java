@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration;
 
 /**
- * CLASS_NAME: ApplicationConfig.java
+ * CLASS_NAME: ApplicationConfiguration.java
  *
  * @author ranyk
  * @version V1.0
@@ -15,5 +15,5 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @EnableConfigurationProperties(value = {VectorProperties.class, FileProperties.class})
-public class ApplicationConfig {
+public class ApplicationConfiguration {
 }

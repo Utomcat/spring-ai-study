@@ -8,7 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
- * CLASS_NAME: VirtualThreadConfig.java
+ * CLASS_NAME: VirtualThreadConfiguration.java
  *
  * @author ranyk
  * @version V1.0
@@ -16,7 +16,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * @date: 2026-06-24
  */
 @Configuration
-public class VirtualThreadConfig {
+public class VirtualThreadConfiguration {
 
     /**
      * 创建一个虚拟线程调度对象
