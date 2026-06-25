@@ -153,6 +153,14 @@
             <version>8.0.0-beta1</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-markdown-document-reader</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-tika-document-reader</artifactId>
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -175,6 +183,10 @@
                 <configuration>
                     <source>21</source>
                     <target>21</target>
+                    <!-- 指定编码 -->
+                    <encoding>utf-8</encoding>
+                    <!-- 强制分叉进程,确保单独传递参数 -->
+                    <fork>false</fork>
                     <!-- 关键配置：annotationProcessorPaths 的顺序和内容 -->
                     <annotationProcessorPaths>
                         <!-- 1. 必须：Lombok 处理器 -->
