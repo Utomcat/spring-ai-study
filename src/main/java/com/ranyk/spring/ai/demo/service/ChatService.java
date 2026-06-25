@@ -1,9 +1,16 @@
 package com.ranyk.spring.ai.demo.service;
 
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONUtil;
 import com.ranyk.spring.ai.demo.ai.tool.DataTimeTool;
+import com.ranyk.spring.ai.demo.common.domain.metadata.VectorDataMetaData;
+import com.ranyk.spring.ai.demo.common.exception.ServiceException;
+import com.ranyk.spring.ai.demo.config.properties.FileProperties;
+import com.ranyk.spring.ai.demo.config.properties.VectorProperties;
+import com.ranyk.spring.ai.demo.domain.dto.UploaderDTO;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBook;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBookReview;
+import com.ranyk.spring.ai.demo.utils.DocumentParseUtils;
 import com.ranyk.spring.ai.demo.utils.MathUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -12,15 +19,18 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.redis.RedisVectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -68,10 +78,17 @@ public class ChatService {
      */
     private final DataTimeTool dataTimeTool;
     /**
-     * 批量删除向量存储数据时, 每批次删除的数量, 如果未进行配置, 则默认为 10
+     * 向量存储属性 {@link VectorProperties} 配置属性对象
      */
-    @Value("${vector.data.delete.batch-quantity:10}")
-    private Integer batchQuantity;
+    private final VectorProperties vectorProperties;
+    /**
+     * 文件属性 {@link FileProperties} 配置属性对象
+     */
+    private final FileProperties fileProperties;
+    /**
+     * TokenTextSplitter 对象 - 用于将 Document 按 Token 进行拆分, 生成多个 chunk (文本块)
+     */
+    private final TokenTextSplitter tokenTextSplitter;
 
     /**
      * 构造方法 - 向 ChatService 对象中注入 ChatClient 对象
@@ -84,6 +101,9 @@ public class ChatService {
      * @param vectorStore                           向量存储 {@link VectorStore} 对象- 使用 Spring AI 的自动配置创建的 嵌入模型 {@link OpenAiEmbeddingModel}
      * @param redisVectorStore                      Redis 向量存储 {@link RedisVectorStore} 对象- 使用 Spring AI 的自动配置创建的 Redis 向量存储 {@link RedisVectorStore} 对象
      * @param dataTimeTool                          Spring AI 需要调用的日期时间工具类 {@link DataTimeTool}
+     * @param vectorProperties                      向量存储属性 {@link VectorProperties} 配置属性对象
+     * @param fileProperties                        文件属性 {@link FileProperties} 配置属性对象
+     * @param tokenTextSplitter                     TokenTextSplitter 对象 - 用于将 Document 按 Token 进行拆分, 生成多个 chunk (文本块)
      */
     @Autowired
     public ChatService(ChatClient dashscopeChatClient,
@@ -93,7 +113,7 @@ public class ChatService {
                        OpenAiEmbeddingModel openAiEmbeddingModel,
                        VectorStore vectorStore,
                        RedisVectorStore redisVectorStore,
-                       DataTimeTool dataTimeTool) {
+                       DataTimeTool dataTimeTool, VectorProperties vectorProperties, FileProperties fileProperties, TokenTextSplitter tokenTextSplitter) {
         this.dashscopeChatClient = dashscopeChatClient;
         this.ollamaChatClient = ollamaChatClient;
         this.javaCounselorChatClient = javaCounselorChatClient;
@@ -102,6 +122,9 @@ public class ChatService {
         this.vectorStore = vectorStore;
         this.redisVectorStore = redisVectorStore;
         this.dataTimeTool = dataTimeTool;
+        this.vectorProperties = vectorProperties;
+        this.fileProperties = fileProperties;
+        this.tokenTextSplitter = tokenTextSplitter;
     }
 
     /**
@@ -476,6 +499,7 @@ public class ChatService {
             return "No Operation";
         }
         // 求 count / batchQuantity 向上取整
+        Integer batchQuantity = vectorProperties.getVectorData().getDelete().getBatchQuantity();
         int batchCount = (int) Math.ceil(count / (double) batchQuantity);
         for (int i = 0; i < batchCount; i++) {
             List<String> ids = redisVectorStore.similaritySearch(SearchRequest.builder()
@@ -487,4 +511,71 @@ public class ChatService {
         log.info("Current Use OpenAI Vector Store Method, Delete All Documents size => {}, Result => {}", count, "Success");
         return "Success";
     }
+
+    /**
+     * 文件上传处理逻辑, 将文件保存至指定的目录下, 并返回保存的文件路径, 再调用 OpenAI 解析文档, 将文档存入向量数据库
+     *
+     * @param list 文件列表
+     * @return 处理结果
+     */
+    public String uploadFileAndVectorStore(List<MultipartFile> list, UploaderDTO uploaderDTO) {
+        log.info("Current Use OpenAI Vector Store Method, Upload File And Vector Store, File List Size => {}", list.size());
+        // 进行文件参数校验
+        if (list.isEmpty()) {
+            log.error("No file has been uploaded, so no processing is required.");
+            throw new ServiceException("no.upload.file", new Object[]{""});
+        }
+        // 获取文件保存目录
+        String fileSaveDir = fileProperties.getUpload().getRoot() + File.separator + System.currentTimeMillis();
+        // 判断保存目录是否存在, 不存在则需要先创建
+        File dir = new File(fileSaveDir);
+        if (!dir.exists()) {
+            if (!dir.mkdirs()) {
+                log.error("Failed to create directory: {}", fileSaveDir);
+                throw new ServiceException("business.anomalies.occur", new Object[]{"创建文件夹 %s 失败".formatted(fileSaveDir)});
+            }
+        }
+        log.info("文件上传中, 开始解析上传内容, 并进行文件保存至指定的文件目录下....");
+        List<VectorDataMetaData> vectorDataMetaDataList = new ArrayList<>(list.size());
+        // 遍历文件, 保存文件, 并获取保存路径, 用于后续的文件向量转换拆分保存
+        list.forEach(file -> {
+            // 获取文件保存路径, 构成结构为 配置的 根路径 + 时间戳 + 文件名构成
+            String originalFilename = file.getOriginalFilename();
+            String filePath = fileSaveDir + File.separator + originalFilename;
+            try {
+                file.transferTo(new File(filePath));
+                vectorDataMetaDataList.add(VectorDataMetaData.builder()
+                        .documentId(IdUtil.simpleUUID())
+                        .source(filePath)
+                        .fileName(originalFilename)
+                        .category(uploaderDTO.getCategory())
+                        .uploader(uploaderDTO.getUploader())
+                        .build());
+            } catch (IOException e) {
+                throw new ServiceException("business.anomalies.occur", new Object[]{"文件上传失败: %s".formatted(originalFilename)});
+            }
+        });
+        log.info("文件上传完成, 一共上传了 {} 个文件 开始解析文件内容, 为文件拆分成多个 Document 做数据支持....", vectorDataMetaDataList.size());
+        List<Document> needSplitterDocuments = new ArrayList<>();
+        vectorDataMetaDataList.forEach(metaData -> {
+            List<Document> documentList = DocumentParseUtils.parse(metaData.source());
+            documentList.forEach(document -> {
+                // 将当前自定义的 元数据 信息的每一项 添加到 Document 的 metaData 中
+                document.getMetadata().put("documentId", metaData.documentId());
+                document.getMetadata().put("source", metaData.source());
+                document.getMetadata().put("fileName", metaData.fileName());
+                document.getMetadata().put("category", metaData.category());
+                document.getMetadata().put("uploader", metaData.uploader());
+            });
+            log.info("解析文档 {} , 解析完成后一共解析生成了 {} 个 Document", metaData.source(), documentList.size());
+            needSplitterDocuments.addAll(documentList);
+        });
+        log.info("文档解析后, 一共生成了 {} 个待拆分的 Document , 接下来开始拆分...", needSplitterDocuments.size());
+        List<Document> needStoreDocuments = tokenTextSplitter.apply(needSplitterDocuments);
+        log.info("文档拆分后, 一共生成了 {} 个待存储的 Document , 接下来开始存储...", needStoreDocuments.size());
+        redisVectorStore.add(needStoreDocuments);
+        log.info("文档存储完成, 存储的文档数量为 {} ", needStoreDocuments.size());
+        return "Success";
+    }
+
 }

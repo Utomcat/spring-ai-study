@@ -1,19 +1,21 @@
 package com.ranyk.spring.ai.demo.api;
 
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import com.ranyk.spring.ai.demo.common.domain.vo.Result;
+import com.ranyk.spring.ai.demo.domain.mapstruct.UploaderMapper;
+import com.ranyk.spring.ai.demo.domain.request.UploaderRequest;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBook;
 import com.ranyk.spring.ai.demo.domain.vo.TopicBookReview;
 import com.ranyk.spring.ai.demo.service.ChatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -32,15 +34,21 @@ public class ChatApi {
      * 聊天服务对象
      */
     private final ChatService chatService;
+    /**
+     * 文件上传基础数据转换映射接口对象
+     */
+    private final UploaderMapper uploaderMapper;
 
     /**
      * 构造方法 - 向 Spring IOC 容器中注入有关业务逻辑处理类对象
      *
-     * @param chatService 聊天服务对象
+     * @param chatService    聊天服务对象
+     * @param uploaderMapper 文件上传基础数据转换映射接口对象
      */
     @Autowired
-    public ChatApi(ChatService chatService) {
+    public ChatApi(ChatService chatService, UploaderMapper uploaderMapper) {
         this.chatService = chatService;
+        this.uploaderMapper = uploaderMapper;
     }
 
     /**
@@ -263,7 +271,7 @@ public class ChatApi {
     public Result<String> vectorStoreDeleteDocumentById(@RequestParam String id) {
         return Result.success(chatService.vectorStoreDeleteDocumentById(id));
     }
-    
+
     /**
      * 调用 ChatService 的向量删除所有方法, 删除 Redis 向量数据库中所有的文档数据 - 谨慎操作
      *
@@ -272,6 +280,22 @@ public class ChatApi {
     @GetMapping("/vector/store/delete/all/documents")
     public Result<String> vectorStoreDeleteAllDocuments() {
         return Result.success(chatService.vectorStoreDeleteAllDocuments());
+    }
+
+    /**
+     * 调用 ChatService 的文件上传和向量存储方法, 依据用户传入的文件信息进行文件上传和向量存储
+     *
+     * @param files           用户输入的文件信息
+     * @param uploaderRequest 文件上传请求参数
+     * @return 调用结果 {@link Result} 泛型对象, 封装了结果数据
+     */
+    @PostMapping(value = "/upload/file/vector/store", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<String> uploadFileAndVectorStore(@RequestParam("files") MultipartFile[] files, @ModelAttribute UploaderRequest uploaderRequest) {
+        // 过滤掉空文件: 文件名为空或文件大小为0的无效文件
+        List<MultipartFile> validFiles = Arrays.stream(files)
+                .filter(file -> file != null && StrUtil.isNotBlank(file.getOriginalFilename()) && file.getSize() > 0)
+                .toList();
+        return Result.success(chatService.uploadFileAndVectorStore(validFiles, uploaderMapper.uploaderRequestToUploaderDTO(uploaderRequest)));
     }
 
     /**
