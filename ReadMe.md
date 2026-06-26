@@ -2,16 +2,16 @@
 
 ## 📖 项目简介
 
-spring-ai-study 是一个基于 **Spring Boot 4.1.1** 和 **Spring AI 2.0.0** 构建的大语言模型集成学习项目。该项目采用**多模块架构
-**，演示了如何使用
+spring-ai-study 是一个基于 **Spring Boot 4.1.1** 和 **Spring AI 2.0.0** 构建的大语言模型集成学习项目。该项目采用**多模块架构**，演示了如何使用
 Spring AI 框架集成多种大模型服务（阿里云百炼平台 qwen3.7-plus 和本地 Ollama deepseek-r1:1.5b），并展示了流式响应、会话记忆、结构化输出、工具调用、
-**文本嵌入、向量存储、文件上传解析、RAG 检索增强生成**等高级 AI 功能。
+**MCP Server 服务端、文本嵌入、向量存储、文件上传解析、RAG 检索增强生成**等高级 AI 功能。
 
 ### 🎯 核心能力
 
 - **多模型支持**: 阿里云 DashScope（qwen3.7-plus）+ 本地 Ollama（deepseek-r1:1.5b）
 - **智能对话**: 阻塞式/流式聊天、会话记忆、提示词工程、结构化输出
 - **工具调用**: AI 可调用 Java 方法（获取时间、设置闹钟等）
+- **MCP Server**: 提供标准化的工具服务端，支持 AI 模型通过 MCP 协议调用工具（天气预报等）
 - **文本嵌入**: 使用 text-embedding-v4 模型进行文本向量化和相似度计算
 - **向量存储**: 基于 Redis Stack 的向量数据库，支持相似度搜索和文档管理
 - **文件处理**: 支持 PDF/Word/TXT/Markdown 文件上传、解析、分块和向量化
@@ -21,10 +21,11 @@ Spring AI 框架集成多种大模型服务（阿里云百炼平台 qwen3.7-plus
 
 ### 📦 项目模块
 
-| 模块名称            | 说明                          | 包名                       |
-|-----------------|-----------------------------|--------------------------|
-| spring-ai-study | 父项目（POM），管理依赖版本和构建配置        | -                        |
-| spring-ai-base  | Spring AI 基础知识模块，包含所有核心功能实现 | com.ranyk.spring.ai.base |
+| 模块名称               | 说明                                      | 包名                              | 端口  |
+|--------------------|-----------------------------------------|---------------------------------|-----|
+| spring-ai-study    | 父项目（POM），管理依赖版本和构建配置                    | -                               | -   |
+| spring-ai-base     | Spring AI 基础知识模块，包含所有核心功能实现             | com.ranyk.spring.ai.base        | 8080|
+| spring-ai-mcp-server | Spring AI MCP Server 模块，提供 MCP 工具服务端 | com.ranyk.spring.ai.mcp.server | 8081|
 
 ### 🏗️ 项目架构
 
@@ -39,7 +40,13 @@ Spring AI 框架集成多种大模型服务（阿里云百炼平台 qwen3.7-plus
     - 继承父项目的依赖版本
     - 包含所有业务代码和资源配置
     - 可独立运行和测试
-    - 后续可扩展更多子模块（如 spring-ai-advanced、spring-ai-rag 等）
+    - 端口：8080
+
+- **子模块 (spring-ai-mcp-server)**:
+    - Spring AI MCP Server 实现
+    - 提供可被 MCP Client 调用的工具服务
+    - 端口：8081
+    - 通过 SSE 与 spring-ai-base 通信
 
 ---
 
@@ -141,6 +148,17 @@ spring-ai-study/                              # 父项目（POM）
 │       └── test/
 │           └── java/com/ranyk/spring/ai/base/
 │               └── SpringAiBaseApplicationTests.java        # 测试类
+├── spring-ai-mcp-server/                     # Spring AI MCP Server 模块
+│   ├── pom.xml                               # 子模块 POM
+│   └── src/
+│       └── main/
+│           ├── java/com/ranyk/spring/ai/mcp/server/
+│           │   ├── SpringAiMcpServerApplication.java       # MCP Server 启动类
+│           │   └── ai/
+│           │       └── tool/
+│           │           └── WeatherMcpTool.java             # MCP 工具示例（天气预报）
+│           └── resources/
+│               └── application.yml                          # MCP Server 配置文件
 ├── .gitignore                                # Git 忽略配置
 ├── LICENSE                                   # 许可证文件
 └── ReadMe.md                                 # 项目说明文档
@@ -315,6 +333,47 @@ AI 可以调用预定义的 Java 方法：
     - `spring.web.locale-resolver`: 语言解析器（默认 `accept-header`）
 - **消息文件位置**: `src/main/resources/i18n/`
 - **使用场景**: 异常消息、业务提示、国际化响应
+
+### 15. MCP Server 服务 (Model Context Protocol)
+
+提供 MCP Server 实现,支持 AI 模型通过标准化协议调用工具：
+
+- **MCP Server 配置**:
+    - 服务名称: `spring-ai-mcp-server`
+    - 服务版本: `1.0.0`
+    - 服务类型: `SYNC` (同步模式)
+    - 端口: `8081`
+    - SSE 连接: 与 spring-ai-base 模块通过 SSE 通信
+
+- **已提供的 MCP 工具**:
+    - `getWeatherForecast`: 根据城市名称查询天气预报（演示数据）
+        - 参数: `city` (城市名称)
+        - 返回: 天气预报信息字符串
+
+- **配置项**:
+    - `spring.ai.mcp.server.name`: MCP Server 名称
+    - `spring.ai.mcp.server.version`: MCP Server 版本
+    - `spring.ai.mcp.server.type`: 服务类型 (SYNC/ASYNC)
+    - `spring.ai.mcp.server.annotation-scanner.enabled`: 是否启用注解扫描
+
+- **MCP Client 配置** (spring-ai-base 模块):
+    - 连接地址: `http://localhost:8081`
+    - 连接类型: SSE (Server-Sent Events)
+    - 启用状态: 已启用
+
+- **工作流程**:
+    1. spring-ai-base 模块作为 MCP Client 连接 spring-ai-mcp-server
+    2. AI 模型识别用户意图后通过 MCP 协议调用工具
+    3. spring-ai-mcp-server 执行工具方法并返回结果
+    4. AI 模型基于工具返回结果生成回答
+
+- **优势**:
+    - 标准化的工具调用协议
+    - 工具服务独立部署,便于扩展
+    - 支持多语言、多框架集成
+    - 工具可复用,一次部署多处使用
+
+- **应用场景**: 天气查询、外部 API 调用、数据检索、业务逻辑封装
 
 ---
 
@@ -508,12 +567,22 @@ docker exec -it redis-stack redis-cli ping
 
 5. **运行应用**
    ```bash
-   # 方式一：在 spring-ai-base 模块目录运行
+   # 方式一：在父项目根目录，同时启动两个模块
+   # 先启动 MCP Server
+   cd spring-ai-mcp-server
+   mvn spring-boot:run
+
+   # 再启动主应用
+   cd ../spring-ai-base
+   mvn spring-boot:run
+
+   # 方式二：在 IDE 中运行
+   # 1. 先运行 SpringAiMcpServerApplication.java (端口 8081)
+   # 2. 再运行 SpringAiBaseApplication.java (端口 8080)
+
+   # 方式三：仅启动 spring-ai-base 模块（不使用 MCP 功能）
    cd spring-ai-base
    mvn spring-boot:run
-   
-   # 方式二：直接运行主类
-   # 在 IDE 中运行 SpringAiBaseApplication.java
    ```
 
 6. **测试接口**
@@ -746,6 +815,39 @@ GET /chat/ai/similarity/search/vector/store/file/with/question/answer/advisor?te
 }
 ```
 
+### 示例 11: MCP 工具调用（天气预报）
+
+```bash
+# 确保已启动 spring-ai-mcp-server (8081) 和 spring-ai-base (8080)
+# AI 模型会自动识别用户意图，通过 MCP 协议调用 WeatherMcpTool 工具
+
+# 通过自然语言询问天气（AI 会自动调用 getWeatherForecast 工具）
+GET /chat/ai/dashscope?question=北京今天天气怎么样？
+GET /chat/ai/dashscope?question=帮我查询上海的天气预报
+```
+
+响应:
+
+```json
+{
+  "code": "200",
+  "success": true,
+  "msg": "success",
+  "data": "根据查询结果，当前城市: 北京 的天气预报信息为: 天气很好, 温度适宜, 湿度适中, 风向: 东风, 风级: 3级, 最低温度: 22℃, 最高温度: 30℃"
+}
+```
+
+**MCP 工具调用流程**:
+
+1. 用户提出天气相关问题
+2. AI 模型识别意图，判断需要调用 MCP 工具
+3. 通过 SSE 连接调用 spring-ai-mcp-server 的 `getWeatherForecast` 工具
+4. MCP Server 执行工具方法并返回结果
+5. AI 模型基于工具返回结果生成自然语言回答
+6. 返回给用户
+
+**注意**: 当前天气预报为演示数据，真实场景需接入气象 API。
+
 ---
 
 ## 🏗️ 架构设计
@@ -810,6 +912,39 @@ MultipartFile[] → 过滤空文件
                 → 返回成功响应
 ```
 
+### MCP Server 架构
+
+```
+spring-ai-base (MCP Client, 端口 8080)
+    ↓ SSE 连接 (http://localhost:8081)
+spring-ai-mcp-server (MCP Server, 端口 8081)
+    ↓ 注解扫描
+@McpTool 工具类 (WeatherMcpTool 等)
+    ↓ 执行业务逻辑
+返回结果给 MCP Client
+    ↓
+AI 模型生成回答
+```
+
+**MCP Server 模块结构**:
+- `SpringAiMcpServerApplication`: 启动类，配置 MCP Server
+- `WeatherMcpTool`: 天气预报工具示例
+  - 使用 `@McpTool` 注解声明工具
+  - 使用 `@McpToolParam` 注解声明参数
+  - 提供 `getWeatherForecast` 方法供 MCP Client 调用
+
+**通信协议**:
+- SSE (Server-Sent Events): 实现服务端推送
+- JSON-RPC 2.0: MCP 协议的基础消息格式
+- 同步模式 (SYNC): 当前配置的服务类型
+
+**扩展方式**:
+1. 创建新的工具类并添加 `@Component` 注解
+2. 使用 `@McpTool` 注解标记工具方法
+3. 使用 `@McpToolParam` 注解标记参数
+4. 重启 spring-ai-mcp-server 服务
+5. spring-ai-base 自动发现并注册新工具
+
 ---
 
 ## 🐛 注意事项
@@ -834,18 +969,25 @@ MultipartFile[] → 过滤空文件
 18. **元数据管理**: 每个向量文档都包含 documentId、source、fileName、category、uploader 元数据，便于检索和追溯
 19. **国际化支持**: 默认语言为简体中文，支持英文切换，异常消息已做国际化处理
 20. **文件存储路径**: 默认存储在 `${user.dir}/upload/` 目录，可通过 `file.upload.root` 配置修改
+21. **MCP Server 端口**: spring-ai-mcp-server 默认端口 8081，需确保端口未被占用
+22. **MCP 服务启动顺序**: 建议先启动 spring-ai-mcp-server (8081)，再启动 spring-ai-base (8080)，确保 MCP Client 能正常连接
+23. **MCP SSE 连接**: spring-ai-base 通过 SSE 连接 MCP Server，确保两模块在同一网络或可互通
+24. **MCP 工具扩展**: 新增 MCP 工具需在 spring-ai-mcp-server 模块中创建并添加 `@McpTool` 注解，重启服务生效
+25. **模块独立运行**: spring-ai-base 和 spring-ai-mcp-server 可独立运行，但在使用 MCP 功能时需同时启动两个模块
 
 ---
 
 ## 📚 学习资源
 
 - [Spring AI 官方文档](https://docs.spring.io/spring-ai/reference/)
+- [Spring AI MCP 文档](https://docs.spring.io/spring-ai/reference/api/mcp)
 - [阿里云百炼平台文档](https://help.aliyun.com/zh/model-studio/)
 - [Ollama 官方文档](https://ollama.ai/docs)
 - [Spring Boot 文档](https://docs.spring.io/spring-boot/docs/current/reference/html/)
 - [Redis Stack 文档](https://redis.io/docs/stack/)
 - [Apache Tika 文档](https://tika.apache.org/)
 - [Java 21 虚拟线程](https://docs.oracle.com/en/java/javase/21/core/virtual-threads.html)
+- [MCP 协议规范](https://modelcontextprotocol.io/)
 
 ---
 
