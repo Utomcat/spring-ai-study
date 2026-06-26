@@ -20,6 +20,7 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.mcp.SyncMcpToolCallbackProvider;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -91,6 +92,10 @@ public class ChatService {
      * TokenTextSplitter 对象 - 用于将 Document 按 Token 进行拆分, 生成多个 chunk (文本块)
      */
     private final TokenTextSplitter tokenTextSplitter;
+    /**
+     * Spring AI 需要调用的 MCP 工具回调提供者 {@link SyncMcpToolCallbackProvider}
+     */
+    private final SyncMcpToolCallbackProvider mcpToolCallbackProvider;
 
     /**
      * 构造方法 - 向 ChatService 对象中注入 ChatClient 对象
@@ -106,9 +111,21 @@ public class ChatService {
      * @param vectorProperties                      向量存储属性 {@link VectorProperties} 配置属性对象
      * @param fileProperties                        文件属性 {@link FileProperties} 配置属性对象
      * @param tokenTextSplitter                     TokenTextSplitter 对象 - 用于将 Document 按 Token 进行拆分, 生成多个 chunk (文本块)
+     * @param mcpToolCallbackProvider               Spring AI 需要调用的 MCP 工具回调提供者 {@link SyncMcpToolCallbackProvider}
      */
     @Autowired
-    public ChatService(ChatClient dashscopeChatClient, ChatClient ollamaChatClient, ChatClient javaCounselorChatClient, ChatClient dashscopeInMemoryChatMemoryChatClient, OpenAiEmbeddingModel openAiEmbeddingModel, VectorStore vectorStore, RedisVectorStore redisVectorStore, DataTimeTool dataTimeTool, VectorProperties vectorProperties, FileProperties fileProperties, TokenTextSplitter tokenTextSplitter) {
+    public ChatService(ChatClient dashscopeChatClient,
+                       ChatClient ollamaChatClient,
+                       ChatClient javaCounselorChatClient,
+                       ChatClient dashscopeInMemoryChatMemoryChatClient,
+                       OpenAiEmbeddingModel openAiEmbeddingModel,
+                       VectorStore vectorStore,
+                       RedisVectorStore redisVectorStore,
+                       DataTimeTool dataTimeTool,
+                       VectorProperties vectorProperties,
+                       FileProperties fileProperties,
+                       TokenTextSplitter tokenTextSplitter,
+                       SyncMcpToolCallbackProvider mcpToolCallbackProvider) {
         this.dashscopeChatClient = dashscopeChatClient;
         this.ollamaChatClient = ollamaChatClient;
         this.javaCounselorChatClient = javaCounselorChatClient;
@@ -120,6 +137,7 @@ public class ChatService {
         this.vectorProperties = vectorProperties;
         this.fileProperties = fileProperties;
         this.tokenTextSplitter = tokenTextSplitter;
+        this.mcpToolCallbackProvider = mcpToolCallbackProvider;
     }
 
     /**
@@ -592,5 +610,24 @@ public class ChatService {
         String searchResult = dashscopeChatClient.prompt().advisors(questionAnswerAdvisor).user(querySimilarityFileDTO.getText()).call().content();
         log.info("Current Use OpenAI Vector Store, Similarity Search With Question Answer Advisor, Query Result => {}", searchResult);
         return searchResult;
+    }
+
+    /**
+     * 调用 MCP 服务的 获取天气预报 工具, 查询指定城市的天气预报
+     *
+     * @param city 城市名称
+     * @return 天气预报结果
+     */
+    public String callMcpServerGetWeatherForecast(String city) {
+        log.info("Current Use Open AI Call MCP Server Get Weather Forecast, City => {}", city);
+        String userQuestion = "帮我查询一下 %s 的天气.".formatted(city);
+        String mcpCallResult = dashscopeChatClient.prompt()
+                .system("用户提出需要查询天气的问题, 你必须调用工具查询后用简洁的语言总结后, 使用中文回答对应的问题")
+                .user(userQuestion)
+                .tools(mcpToolCallbackProvider)
+                .call()
+                .content();
+        log.info("Current Use Open AI Call MCP Server Get Weather Forecast, Call MCP Server Result => {}", mcpCallResult);
+        return mcpCallResult;
     }
 }

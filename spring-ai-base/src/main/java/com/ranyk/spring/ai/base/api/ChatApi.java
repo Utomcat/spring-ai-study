@@ -329,6 +329,17 @@ public class ChatApi {
     }
 
     /**
+     * 调用 ChatService 的调用 MCP 服务器获取天气预报方法, 依据用户传入的城市名称获取天气预报信息
+     *
+     * @param city 用户输入的城市名称
+     * @return 天气预报信息 {@link Result} 泛型对象, 封装了结果数据
+     */
+    @GetMapping("/call/mcp/server/get/weather/forecast")
+    public Result<String> callMcpServerGetWeatherForecast(@RequestParam String city) {
+        return Result.success(chatService.callMcpServerGetWeatherForecast(city));
+    }
+
+    /**
      * 构建 SSE 事件对象
      *
      * @param eventType 事件类型
