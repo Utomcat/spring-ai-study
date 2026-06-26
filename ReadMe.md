@@ -2,9 +2,10 @@
 
 ## 📖 项目简介
 
-spring-ai-study 是一个基于 **Spring Boot 4.1.1** 和 **Spring AI 2.0.0** 构建的大语言模型集成学习项目。该项目采用**多模块架构**，演示了如何使用
+spring-ai-study 是一个基于 **Spring Boot 4.1.1** 和 **Spring AI 2.0.0** 构建的大语言模型集成学习项目。该项目采用**多模块架构
+**，演示了如何使用
 Spring AI 框架集成多种大模型服务（阿里云百炼平台 qwen3.7-plus 和本地 Ollama deepseek-r1:1.5b），并展示了流式响应、会话记忆、结构化输出、工具调用、
-**MCP Server 服务端、文本嵌入、向量存储、文件上传解析、RAG 检索增强生成**等高级 AI 功能。
+**MCP Server 服务端、文本嵌入、向量存储、文件上传解析、RAG 检索增强生成、多模态图片解析**等高级 AI 功能。
 
 ### 🎯 核心能力
 
@@ -16,16 +17,17 @@ Spring AI 框架集成多种大模型服务（阿里云百炼平台 qwen3.7-plus
 - **向量存储**: 基于 Redis Stack 的向量数据库，支持相似度搜索和文档管理
 - **文件处理**: 支持 PDF/Word/TXT/Markdown 文件上传、解析、分块和向量化
 - **RAG 增强**: 基于私有知识库的检索增强生成，提高回答准确性
+- **多模态解析**: 支持图片文件多模态解析，识别图片内容并回答用户需求
 - **虚拟线程**: Java 21 虚拟线程处理异步任务和定时调度
 - **国际化**: 支持中英文多语言消息
 
 ### 📦 项目模块
 
-| 模块名称               | 说明                                      | 包名                              | 端口  |
-|--------------------|-----------------------------------------|---------------------------------|-----|
-| spring-ai-study    | 父项目（POM），管理依赖版本和构建配置                    | -                               | -   |
-| spring-ai-base     | Spring AI 基础知识模块，包含所有核心功能实现             | com.ranyk.spring.ai.base        | 8080|
-| spring-ai-mcp-server | Spring AI MCP Server 模块，提供 MCP 工具服务端 | com.ranyk.spring.ai.mcp.server | 8081|
+| 模块名称                 | 说明                                   | 包名                             | 端口   |
+|----------------------|--------------------------------------|--------------------------------|------|
+| spring-ai-study      | 父项目（POM），管理依赖版本和构建配置                 | -                              | -    |
+| spring-ai-base       | Spring AI 基础知识模块，包含所有核心功能实现          | com.ranyk.spring.ai.base       | 8080 |
+| spring-ai-mcp-server | Spring AI MCP Server 模块，提供 MCP 工具服务端 | com.ranyk.spring.ai.mcp.server | 8081 |
 
 ### 🏗️ 项目架构
 
@@ -151,14 +153,19 @@ spring-ai-study/                              # 父项目（POM）
 ├── spring-ai-mcp-server/                     # Spring AI MCP Server 模块
 │   ├── pom.xml                               # 子模块 POM
 │   └── src/
-│       └── main/
-│           ├── java/com/ranyk/spring/ai/mcp/server/
-│           │   ├── SpringAiMcpServerApplication.java       # MCP Server 启动类
-│           │   └── ai/
-│           │       └── tool/
-│           │           └── WeatherMcpTool.java             # MCP 工具示例（天气预报）
-│           └── resources/
-│               └── application.yml                          # MCP Server 配置文件
+│       ├── main/
+│       │   ├── java/com/ranyk/spring/ai/mcp/server/
+│       │   │   ├── SpringAiMcpServerApplication.java       # MCP Server 启动类
+│       │   │   └── ai/
+│       │   │       └── tool/
+│       │   │           └── WeatherMcpTool.java             # MCP 工具示例（天气预报）
+│       │   └── resources/
+│       │       ├── META-INF/spring/
+│       │       │   └── org.springframework.boot.autoconfigure.AutoConfiguration.imports # 自动配置导入
+│       │       └── application.yml                          # MCP Server 配置文件
+│       └── test/
+│           └── java/com/ranyk/spring/ai/mcp/server/
+│               └── SpringAiMcpServerApplicationTests.java  # 测试类
 ├── .gitignore                                # Git 忽略配置
 ├── LICENSE                                   # 许可证文件
 └── ReadMe.md                                 # 项目说明文档
@@ -259,7 +266,7 @@ AI 可以调用预定义的 Java 方法：
     - `spring.ai.vectorstore.redis.initialize-schema`: 是否初始化向量索引
     - `spring.ai.vectorstore.redis.index-name`: RedisSearch 索引名称
     - `spring.ai.vectorstore.redis.prefix`: 向量文档键前缀
-    - `vector.data.delete.batch-quantity`: 批量删除时每批次的数量
+    - `vector.vector-data.delete.batch-quantity`: 批量删除时每批次的数量
 - **应用场景**: 语义搜索、RAG（检索增强生成）、知识库构建、文档推荐
 
 ### 11. 文件上传与智能解析 (File Upload & Parsing)
@@ -334,7 +341,30 @@ AI 可以调用预定义的 Java 方法：
 - **消息文件位置**: `src/main/resources/i18n/`
 - **使用场景**: 异常消息、业务提示、国际化响应
 
-### 15. MCP Server 服务 (Model Context Protocol)
+### 15. 多模态图片解析 (Multimodal)
+
+使用 qwen3.7-plus 模型的多模态能力，对上传的图片进行智能解析：
+
+- **支持的图片格式**:
+    - **JPEG** (.jpg, .jpeg)
+    - **PNG** (.png)
+    - **GIF** (.gif)
+- **功能特点**:
+    - 支持多文件批量上传和解析
+    - 自动过滤非图片文件并提示排除列表
+    - 支持自定义解析需求（描述图片、提取文字、识别内容等）
+    - 逐张解析并返回每张图片的结果
+- **处理流程**:
+    1. **文件接收**: 接收 MultipartFile 数组，过滤空文件
+    2. **文件保存**: 保存到 `upload/{timestamp}/` 目录
+    3. **格式校验**: 过滤非图片格式文件，记录排除列表
+    4. **多模态解析**: 使用 dashscopeChatClient 调用 qwen3.7-plus 多模态能力
+    5. **结果组装**: 按文件分组返回解析结果，附排除文件说明
+- **系统提示词**: "你是一个专业的多模态图片解析专家, 请根据用户需求, 对对应的图片进行解析后返回用户的需求内容,
+  请用中文回复"
+- **应用场景**: 图片内容描述、OCR文字识别、场景分析、商品识别、图表解读
+
+### 16. MCP Server 服务 (Model Context Protocol)
 
 提供 MCP Server 实现,支持 AI 模型通过标准化协议调用工具：
 
@@ -354,12 +384,16 @@ AI 可以调用预定义的 Java 方法：
     - `spring.ai.mcp.server.name`: MCP Server 名称
     - `spring.ai.mcp.server.version`: MCP Server 版本
     - `spring.ai.mcp.server.type`: 服务类型 (SYNC/ASYNC)
+    - `spring.ai.mcp.server.instructions`: 服务说明指令（告诉模型如何使用这些工具）
     - `spring.ai.mcp.server.annotation-scanner.enabled`: 是否启用注解扫描
+    - `spring.ai.mcp.server.sse-endpoint`: SSE 端点路径（默认 /sse）
+    - `spring.ai.mcp.server.sse-message-endpoint`: SSE 消息端点路径（默认 /mcp/message）
 
 - **MCP Client 配置** (spring-ai-base 模块):
     - 连接地址: `http://localhost:8081`
     - 连接类型: SSE (Server-Sent Events)
     - 启用状态: 已启用
+    - 配置路径: `spring.ai.mcp.client.sse.connections.spring-ai-mcp-server.url`
 
 - **工作流程**:
     1. spring-ai-base 模块作为 MCP Client 连接 spring-ai-mcp-server
@@ -404,6 +438,8 @@ AI 可以调用预定义的 Java 方法：
 | `/upload/file/vector/store`                                         | POST | 文件上传并存储到向量库        | `files` (MultipartFile[]), `category`, `uploader` |
 | `/similarity/search/vector/store/file`                              | GET  | 文件相似度搜索            | `text`, `topK` (可选)                               |
 | `/similarity/search/vector/store/file/with/question/answer/advisor` | GET  | RAG增强文件相似度问答       | `text`                                            |
+| `/call/mcp/server/get/weather/forecast`                             | GET  | MCP工具调用-天气预报       | `city`                                            |
+| `/upload/file/multimodal/parse`                                     | POST | 多模态图片解析            | `files` (MultipartFile[]), `requirement`          |
 
 ### Ollama 模型接口
 
@@ -480,7 +516,7 @@ spring:
 
 # 自定义向量配置
 vector:
-  data:
+  vector-data:
     delete:
       batch-quantity: 100
 
@@ -817,6 +853,8 @@ GET /chat/ai/similarity/search/vector/store/file/with/question/answer/advisor?te
 
 ### 示例 11: MCP 工具调用（天气预报）
 
+#### 方式一：通过通用对话接口自动调用
+
 ```bash
 # 确保已启动 spring-ai-mcp-server (8081) 和 spring-ai-base (8080)
 # AI 模型会自动识别用户意图，通过 MCP 协议调用 WeatherMcpTool 工具
@@ -837,6 +875,25 @@ GET /chat/ai/dashscope?question=帮我查询上海的天气预报
 }
 ```
 
+#### 方式二：通过 MCP 专用接口直接调用
+
+```bash
+# 直接调用 MCP 工具接口，更明确地使用 MCP 功能
+GET /chat/ai/call/mcp/server/get/weather/forecast?city=北京
+GET /chat/ai/call/mcp/server/get/weather/forecast?city=上海
+```
+
+响应:
+
+```json
+{
+  "code": "200",
+  "success": true,
+  "msg": "success",
+  "data": "当前城市: 北京 的天气预报信息为: 天气很好, 温度适宜, 湿度适中, 风向: 东风, 风级: 3级, 最低温度: 22℃, 最高温度: 30℃"
+}
+```
+
 **MCP 工具调用流程**:
 
 1. 用户提出天气相关问题
@@ -847,6 +904,44 @@ GET /chat/ai/dashscope?question=帮我查询上海的天气预报
 6. 返回给用户
 
 **注意**: 当前天气预报为演示数据，真实场景需接入气象 API。
+
+### 示例 12: 多模态图片解析
+
+```bash
+# 上传图片并指定解析需求（支持 JPEG/PNG/GIF 格式，多文件批量上传）
+POST /chat/ai/upload/file/multimodal/parse
+Content-Type: multipart/form-data
+
+files: [选择图片文件]
+requirement: 请描述这张图片的内容
+```
+
+响应:
+
+```json
+{
+  "code": "200",
+  "success": true,
+  "msg": "success",
+  "data": "[{\"文件 example.jpg 通过多模态图片解析后的结果\":\"这张图片展示了一个阳光明媚的公园场景...\"}]"
+}
+```
+
+**多模态解析流程**:
+
+1. 用户上传图片文件并指定解析需求
+2. 系统校验文件格式（仅支持 JPEG/PNG/GIF）
+3. 有效图片保存到 `upload/{timestamp}/` 目录
+4. 调用 qwen3.7-plus 多模态模型逐张解析图片
+5. 组装所有解析结果（含排除文件提示）
+6. 返回 JSON 格式的解析结果
+
+**支持的解析需求示例**:
+
+- "请描述这张图片的内容"
+- "提取图片中的所有文字"
+- "识别图片中的物体"
+- "分析这张图表的数据趋势"
 
 ---
 
@@ -912,6 +1007,18 @@ MultipartFile[] → 过滤空文件
                 → 返回成功响应
 ```
 
+### 多模态图片解析流程
+
+```
+MultipartFile[] → 过滤空文件
+                → 格式校验（仅支持 JPEG/PNG/GIF）
+                → 保存到 upload/{timestamp}/ 目录
+                → dashscopeChatClient.prompt().user().media() 多模态调用
+                → qwen3.7-plus 视觉模型解析
+                → 组装解析结果（含排除文件提示）
+                → 返回 JSON 格式结果
+```
+
 ### MCP Server 架构
 
 ```
@@ -927,18 +1034,21 @@ AI 模型生成回答
 ```
 
 **MCP Server 模块结构**:
+
 - `SpringAiMcpServerApplication`: 启动类，配置 MCP Server
 - `WeatherMcpTool`: 天气预报工具示例
-  - 使用 `@McpTool` 注解声明工具
-  - 使用 `@McpToolParam` 注解声明参数
-  - 提供 `getWeatherForecast` 方法供 MCP Client 调用
+    - 使用 `@McpTool` 注解声明工具
+    - 使用 `@McpToolParam` 注解声明参数
+    - 提供 `getWeatherForecast` 方法供 MCP Client 调用
 
 **通信协议**:
+
 - SSE (Server-Sent Events): 实现服务端推送
 - JSON-RPC 2.0: MCP 协议的基础消息格式
 - 同步模式 (SYNC): 当前配置的服务类型
 
 **扩展方式**:
+
 1. 创建新的工具类并添加 `@Component` 注解
 2. 使用 `@McpTool` 注解标记工具方法
 3. 使用 `@McpToolParam` 注解标记参数
@@ -974,6 +1084,9 @@ AI 模型生成回答
 23. **MCP SSE 连接**: spring-ai-base 通过 SSE 连接 MCP Server，确保两模块在同一网络或可互通
 24. **MCP 工具扩展**: 新增 MCP 工具需在 spring-ai-mcp-server 模块中创建并添加 `@McpTool` 注解，重启服务生效
 25. **模块独立运行**: spring-ai-base 和 spring-ai-mcp-server 可独立运行，但在使用 MCP 功能时需同时启动两个模块
+26. **多模态图片格式**: 多模态解析仅支持 JPEG、PNG、GIF 三种图片格式，其他格式的文件会被自动过滤并提示
+27. **多模态批量处理**: 多文件上传时会逐张解析图片，大文件或多文件可能需要较长处理时间
+28. **多模态模型支持**: 当前多模态解析仅支持 DashScope (qwen3.7-plus) 模型，Ollama 模型需确认是否支持多模态能力
 
 ---
 
