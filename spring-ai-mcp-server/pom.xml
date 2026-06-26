@@ -7,17 +7,16 @@
 		<artifactId>spring-ai-study</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
+
 	<artifactId>spring-ai-mcp-server</artifactId>
+
 	<name>spring-ai-mcp-server</name>
+
 	<description>Spring AI MCP Server 端</description>
 
-	<dependencies>
-		<!-- spring-boot-starter 核心依赖 -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter</artifactId>
-		</dependency>
+	<packaging>jar</packaging>
 
+	<dependencies>
 		<!-- spring-boot-starter-test 测试依赖 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

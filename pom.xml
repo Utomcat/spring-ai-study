@@ -170,6 +170,20 @@
                 <version>${spring-ai.version}</version>
             </dependency>
 
+            <!-- spring-ai-starter-mcp-client -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-starter-mcp-client</artifactId>
+                <version>${spring-ai.version}</version>
+            </dependency>
+
+            <!-- spring-ai-starter-mcp-client-webflux -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-starter-mcp-client-webflux</artifactId>
+                <version>${spring-ai.version}</version>
+            </dependency>
+
             <!-- Source: https://mvnrepository.com/artifact/org.projectlombok/lombok -->
             <dependency>
                 <groupId>org.projectlombok</groupId>

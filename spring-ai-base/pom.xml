@@ -14,6 +14,8 @@
 
 	<description>Spring AI 的基础知识</description>
 
+	<packaging>jar</packaging>
+
 	<dependencies>
 		<!-- spring-boot-starter-webmvc -->
 		<dependency>
@@ -88,6 +90,12 @@
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-vector-store-advisor</artifactId>
+		</dependency>
+
+		<!-- spring-ai-starter-mcp-client -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-mcp-client</artifactId>
 		</dependency>
 
 		<!-- Source: https://mvnrepository.com/artifact/org.projectlombok/lombok -->
