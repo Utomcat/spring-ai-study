@@ -28,6 +28,8 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.redis.RedisVectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
@@ -35,6 +37,7 @@ import reactor.core.publisher.Flux;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * CLASS_NAME: ChatService.java
@@ -629,5 +632,84 @@ public class ChatService {
                 .content();
         log.info("Current Use Open AI Call MCP Server Get Weather Forecast, Call MCP Server Result => {}", mcpCallResult);
         return mcpCallResult;
+    }
+
+    /**
+     * 将用户上传的文件先保存至当前服务的文件存放目录下, 再将其调用大模型的多模态解析, 处理用户的需求, 最后返回大模型的回答
+     *
+     * @param validFiles  有效文件列表
+     * @param requirement 用户需求
+     * @return 大模型回答字符串
+     */
+    public String uploadFileAndMultimodalParse(List<MultipartFile> validFiles, String requirement) {
+        log.info("Current Use Open AI Upload File And Multimodal Parse, Valid Files Size => {}, Requirement => {}", validFiles.size(), requirement);
+        log.info("Current Use Open AI Upload File And Multimodal Parse, Start Upload File ... ");
+        // 进行文件参数校验
+        if (validFiles.isEmpty()) {
+            log.error("Upload File And Multimodal Parse, No file has been uploaded, so no processing is required.");
+            throw new ServiceException("no.upload.file", new Object[]{""});
+        }
+        // 获取文件保存目录
+        String fileSaveDir = fileProperties.getUpload().getRoot() + File.separator + System.currentTimeMillis();
+        // 判断保存目录是否存在, 不存在则需要先创建
+        File dir = new File(fileSaveDir);
+        if (!dir.exists()) {
+            if (!dir.mkdirs()) {
+                log.error("Upload File And Multimodal Parse, Failed to create directory: {}", fileSaveDir);
+                throw new ServiceException("business.anomalies.occur", new Object[]{"创建文件夹 %s 失败".formatted(fileSaveDir)});
+            }
+        }
+        // 过滤当前文件列表中的内容, 排除掉非图片的文件, 将排除的文件名使用一个 List 存放, 最后统一返回
+        List<String> excludeFiles = validFiles.stream().filter(file -> !MediaType.IMAGE_JPEG_VALUE.equals(file.getContentType()) && !MediaType.IMAGE_PNG_VALUE.equals(file.getContentType()) && !MediaType.IMAGE_GIF_VALUE.equals(file.getContentType())).map(MultipartFile::getOriginalFilename).toList();
+        // 排除非指定类型的图片
+        validFiles = validFiles.stream().filter(file -> MediaType.IMAGE_JPEG_VALUE.equals(file.getContentType()) || MediaType.IMAGE_PNG_VALUE.equals(file.getContentType()) || MediaType.IMAGE_GIF_VALUE.equals(file.getContentType())).toList();
+        // 返回 多模态解析结果 数据存储内容
+        List<Map<String, String>> multimodalParseResult = new ArrayList<>(validFiles.size() + 2);
+        // 校验排除图片后,是否存在文件需要多模态解析, 不存在则直接返回
+        if (!validFiles.isEmpty()) {
+            log.info("Upload File And Multimodal Parse, During file upload, start parsing the uploaded content and save the file to the specified file directory....");
+            List<String> filePathList = new ArrayList<>(validFiles.size());
+            // 遍历文件, 保存文件, 并获取保存路径, 用于后续的文件向量转换拆分保存
+            validFiles.forEach(file -> {
+                // 获取文件保存路径, 构成结构为 配置的 根路径 + 时间戳 + 文件名构成
+                String originalFilename = file.getOriginalFilename();
+                String filePath = fileSaveDir + File.separator + originalFilename;
+                try {
+                    file.transferTo(new File(filePath));
+                    filePathList.add(filePath);
+                } catch (IOException e) {
+                    throw new ServiceException("business.anomalies.occur", new Object[]{"文件上传失败: %s".formatted(originalFilename)});
+                }
+            });
+            log.info("Current Use Open AI Upload File And Multimodal Parse, File Upload Completion, Total {} Files Uploaded", filePathList.size());
+            log.info("Current Use Open AI Upload File And Multimodal Parse, Start Multimodal Parse ... ");
+            // 遍历 filePathList ,将其按文件的后缀分组, 使用 JDK 21 的方式
+            Map<String, List<String>> filePathGroup = filePathList.stream().collect(Collectors.groupingBy(filePath -> filePath.substring(filePath.lastIndexOf(".") + 1)));
+            filePathGroup.forEach((key, values) -> {
+                // 通过 key 获取对应的 MimeType 类型
+                MediaType mediaType = new MediaType("image", key);
+                values.forEach(path -> {
+                    // 根据传入的 path 解析获取对应的文件名
+                    String fileName = path.substring(path.lastIndexOf(File.separator) + 1);
+                    Map<String, String> tempResultContent = new HashMap<>(3);
+                    String content = dashscopeChatClient.prompt()
+                            .system("你是一个专业的多模态 图片 解析专家, 请根据用户需求, 对对应的图片进行解析后返回用户的需求内容, 请用中文回复")
+                            .user(u -> u
+                                    .text(requirement)
+                                    .media(mediaType, new FileSystemResource(path)))
+                            .call()
+                            .content();
+                    tempResultContent.put("文件 %s 通过多模态图片解析后的结果".formatted(fileName), content);
+                    multimodalParseResult.add(tempResultContent);
+                });
+            });
+        }
+        // 当存在排除文件时,需要将其添加到处理结果中
+        if (!excludeFiles.isEmpty()) {
+            multimodalParseResult.add(Map.of("其余文件为非指定类型的图片, 不予处理,当前仅支持 GIF、PNG、JPEG 格式, 排除文件有", JSONUtil.toJsonStr(excludeFiles)));
+        }
+        String resultString = JSONUtil.toJsonStr(multimodalParseResult);
+        log.info("Current Use Open AI Upload File And Multimodal Parse, Multimodal Parse Result => {}", resultString);
+        return resultString;
     }
 }

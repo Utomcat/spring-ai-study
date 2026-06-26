@@ -340,6 +340,22 @@ public class ChatApi {
     }
 
     /**
+     * 上传文件. 多文件上传, 同时传入用户提出的需求字符串, 调用 ChatService 的 多模态解析处理方法, 调用大模型进行多模态解析处理
+     *
+     * @param files       用户上传的文件数组,允许多文件上传
+     * @param requirement 用户需求描述字符串
+     * @return 多模态解析处理结果 {@link Result} 泛型对象, 封装了结果数据
+     */
+    @PostMapping(value = "/upload/file/multimodal/parse", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<String> uploadFileAndMultimodalParse(@RequestParam("files") MultipartFile[] files, @RequestParam String requirement) {
+        // 过滤掉空文件: 文件名为空或文件大小为0的无效文件
+        List<MultipartFile> validFiles = Arrays.stream(files)
+                .filter(file -> file != null && StrUtil.isNotBlank(file.getOriginalFilename()) && file.getSize() > 0)
+                .toList();
+        return Result.success(chatService.uploadFileAndMultimodalParse(validFiles, requirement));
+    }
+
+    /**
      * 构建 SSE 事件对象
      *
      * @param eventType 事件类型
